@@ -15,7 +15,7 @@ Proof.
     - intros x y H. destruct y. 
       all: try discriminate.
       inversion H. subst. reflexivity.
-Qed.
+Defined.
 
 #[refine] Global Instance retract_exp_exp_ite : retract (exp_ite exp) exp := { 
     retract_I := In_exp_ite; 
@@ -26,7 +26,7 @@ Proof.
     - intros x y H. destruct y. 
       all: try discriminate.
       inversion H. subst. reflexivity.
-Qed.
+Defined.
     
 Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp := 
     match e with 
@@ -67,12 +67,12 @@ Record Ctx := mkCtx {
 
 Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
     | step_in_lam (c : Ctx) s c' s' : step_lam _ open_rec value _ step c s c' s' -> step c s c' s'
-    | step_in_ite (c : Ctx) s c' s' : step_ite _ _ step c s c' s' -> step c s c' s'
+    | step_in_ite (c : Ctx) s c' s' : step_ite _ _ step c s c' s'                -> step c s c' s'
 .
 
 Definition lc := lc' 0.
 Definition open := open_rec 0.
-
+(* 
 Definition Progress := forall c e, 
   lc e -> 
   value e \/ (exists e' c', step c e c' e').
@@ -80,16 +80,34 @@ Definition Progress := forall c e,
 Definition Preservation := forall c e c' e', 
   lc e -> 
   step c e c' e' -> 
-  lc e'.
+  lc e'. *)
 
-Lemma preservation : Preservation.
+Definition retract_lc_rev_ite : forall (n : nat) (e : exp_ite exp),
+        lc' n (inj e) -> lc'_ite exp lc' n (inj e).
+Proof.
+    intros n e.
+    inversion 1; try (subst; easy).
+Qed.
+
+Definition retract_lc_rev_lam : forall (n : nat) (e : exp_lam exp),
+        lc' n (inj e) -> lc'_lam exp lc' n (inj e).
+Proof.
+    intros n e.
+    inversion 1; try (subst; easy).
+Qed.
+
+
+Fixpoint preservation : forall c e c' e', 
+  lc e -> 
+  step c e c' e' -> 
+  lc e'. 
 Proof. 
     intros c e c' e'.
     unfold lc in *.
     induction 2.
     - apply (preservation_lam _ open_rec lc' value _ step c s c' s'); easy.
-    - apply (preservation_ite _ open_rec lc' value _ step c s c' s'); easy.
-Qed.
+    - apply (preservation_ite _ lc' lc_in_ite retract_lc_rev_ite _ step preservation c s c' s'); easy.
+Defined.
 
 End SIGNALS.
 

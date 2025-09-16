@@ -32,6 +32,9 @@ Section exp_lam.
         | lc_bvar k n    : n < k -> lc'_lam n (bvar_ k)
     .
 
+    Variable retract_lc: forall n e, lc'_lam n e -> lc' n e.
+    Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_lam n (inj e).
+
     Variable value : exp -> Prop.
 
     Inductive value_lam : exp -> Prop := 
@@ -41,6 +44,7 @@ Section exp_lam.
 
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
+    Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
     
 
     Inductive step_lam : Ctx -> exp -> Ctx -> exp -> Prop :=
@@ -53,7 +57,13 @@ Section exp_lam.
     Lemma preservation_lam : forall c e c' e', lc' 0 e -> step_lam c e c' e' -> lc' 0 e'.
     Proof.
         intros c e c' e' lc_e.
-        destruct 1; admit.
+        induction 1.
+        - apply retract_lc_rev in lc_e. inversion lc_e.
+            + apply retract_inj in H1. inversion H1. subst. clear H1.
+              
+              
+          
+        
     Admitted.
     
 End exp_lam.

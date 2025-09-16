@@ -29,6 +29,10 @@ Section exp_ite.
         | lc_bool_lit   n b    : lc'_ite n (bool_lit_ b)
     .
 
+    Variable retract_lc: forall n e, lc'_ite n e -> lc' n e.
+    Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_ite n (inj e).
+
+
     Variable value : exp -> Prop.
 
     Inductive value_ite : exp -> Prop := 
@@ -38,6 +42,7 @@ Section exp_ite.
 
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
+    Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
     
 
     Inductive step_ite : Ctx -> exp -> Ctx -> exp -> Prop :=
@@ -46,11 +51,27 @@ Section exp_ite.
         | stepIte    ctx s ctx' s' t  f : step ctx s ctx' s' -> step_ite ctx (ite_ s t f) ctx' (ite_ s' t f)
     .
 
-    Lemma preservation_ite : forall c e c' e', lc' 0 e -> step_ite c e c' e' -> lc' 0 e'.
+    
+    Definition preservation_ite : forall c e c' e', lc' 0 e -> step_ite c e c' e' -> lc' 0 e'.
     Proof. 
-        intros c e c' e' cl_e.
-        induction 1; admit.
-    Admitted.
+        intros c e c' e' lc_e.
+        induction 1.
+        - unfold ite_ in lc_e. apply retract_lc_rev in lc_e.
+          inversion lc_e. 
+            + unfold ite_ in *. apply retract_inj in H0. inversion H0. subst. easy.
+            + unfold bool_lit_ in *. apply retract_inj in H2. easy.
+        - unfold ite_ in lc_e. apply retract_lc_rev in lc_e.
+          inversion lc_e. 
+            + unfold ite_ in *. apply retract_inj in H0. inversion H0. subst. easy.
+            + unfold bool_lit_ in *. apply retract_inj in H2. easy.
+        - apply retract_lc_rev in lc_e.
+          apply retract_lc.
+          inversion lc_e. 
+          + apply retract_inj in H1. inversion H1. subst.
+            apply lc_ite; try assumption.
+            apply preservation in H0; easy.
+          + apply retract_inj in H3. easy.
+    Defined.
         
 End exp_ite.
 
