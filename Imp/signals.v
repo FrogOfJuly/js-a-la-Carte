@@ -51,28 +51,26 @@ Definition retract_lc_rev_ite : forall (n : nat) (e : exp_ite exp),
             lc' n (inj e) -> lc'_ite exp lc' n (inj e).
 Proof.
     intros n e.
-    inversion 1; subst; easy.
+    inversion 1; easy.
 Qed.
 
 Definition retract_lc_rev_lam : forall (n : nat) (e : exp_lam exp),
         lc' n (inj e) -> lc'_lam exp lc' n (inj e).
 Proof.
     intros n e.
-    inversion 1; subst; easy.
+    inversion 1; easy.
 Qed.
 
 Definition retract_open_rec_rev_lam : forall (n : nat) s (e : exp_lam exp),
             open_rec n s (inj e) = open_rec_lam _ open_rec n s e.
 Proof.
-    intros n s e.
-    simpl. easy.
+    intros n s e. easy.
 Qed.
 
 Definition retract_open_rec_rev_ite : forall (n : nat) s (e : exp_ite exp),
             open_rec n s (inj e) = open_rec_ite _ open_rec n s e.
 Proof.
-    intros n s e.
-    simpl. easy.
+    intros n s e. easy.
 Qed.
 
 Fixpoint lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
