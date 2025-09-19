@@ -1,7 +1,6 @@
 From Imp Require Export header_extensible.
 
 Section exp_ite.
-    
     Variable exp : Type.
 
     Inductive exp_ite : Type := 
@@ -16,22 +15,35 @@ Section exp_ite.
 
     Variable open_rec : nat -> exp -> exp -> exp.
 
-    Definition open_rec_ite (k : nat) (u : exp) (e : exp_ite) : exp := 
-        match e with 
+    Definition open_rec_ite (k : nat) (s : exp) (t : exp_ite) : exp := 
+        match t with 
             | bool_lit b => bool_lit_ b
-            | ite c t f => ite_ (open_rec k u c) (open_rec k u t) (open_rec k u f)
+            | ite c t f => ite_ (open_rec k s c) (open_rec k s t) (open_rec k s f)
         end.
 
-    Variable lc' : nat -> exp -> Prop.
+      Variable retract_open_rec : forall (n : nat) s (e : exp_ite),
+            open_rec n s (inj e) = open_rec_ite n s e.
 
+    Variable lc' : nat -> exp -> Prop.
+    Variable open_rec_lc :forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
+    Variable lc_weaken   : forall s n m, n <= m  -> lc' n s -> lc' m s.
+    
     Inductive lc'_ite : nat -> exp -> Prop := 
         | lc_ite  n c t f : lc' n c -> lc' n t -> lc' n f -> lc'_ite n (ite_ c t f)
         | lc_bool_lit   n b    : lc'_ite n (bool_lit_ b)
     .
-
     Variable retract_lc: forall n e, lc'_ite n e -> lc' n e.
     Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_ite n (inj e).
 
+    Definition open_rec_lc_ite : forall s t n, lc' 0 s -> lc'_ite (S n) t -> lc' n (open_rec n s t).
+    Proof.
+        intros s t n H1 H2.
+        inversion H2; subst.
+        - unfold ite_. rewrite retract_open_rec.
+          simpl. apply retract_lc. constructor; apply open_rec_lc; try easy.
+        - unfold bool_lit_. rewrite retract_open_rec.
+          simpl. apply retract_lc. constructor; apply open_rec_lc; try easy.
+    Defined.
 
     Variable value : exp -> Prop.
 
@@ -74,4 +86,3 @@ Section exp_ite.
     Defined.
         
 End exp_ite.
-

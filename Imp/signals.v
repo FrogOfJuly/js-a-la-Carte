@@ -12,8 +12,7 @@ Inductive exp : Type :=
     }.
 Proof.
     - intros x. reflexivity.
-    - intros x y H. destruct y. 
-      all: try discriminate.
+    - intros x y H. destruct y; (try easy).
       inversion H. subst. reflexivity.
 Defined.
 
@@ -23,8 +22,7 @@ Defined.
     }.
 Proof.
     - intros x. reflexivity.
-    - intros x y H. destruct y. 
-      all: try discriminate.
+    - intros x y H. destruct y; (try easy).
       inversion H. subst. reflexivity.
 Defined.
     
@@ -48,66 +46,89 @@ Inductive value : exp -> Prop :=
     | value_in_ite (e : exp) : value_ite _ e -> value e
 .
 
-From Imp Require Import context.
-
-Module SIGNALS (Import Atom : ATOM) (Import String : STRING).
-
-Module Import Env := Imp.context.Env (Atom) (String).
-
-Inductive stored_val : Type := val_with_proof : forall (v : exp), value v -> stored_val.
-
-Record Ctx := mkCtx {
-    store : Env.AtomEnv.t stored_val;
-    (* 
-        signalStore; 
-        hiddenGlobalState;
-        componentStore?
-    *)
-}.
-
-Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
-    | step_in_lam (c : Ctx) s c' s' : step_lam _ open_rec value _ step c s c' s' -> step c s c' s'
-    | step_in_ite (c : Ctx) s c' s' : step_ite _ _ step c s c' s'                -> step c s c' s'
-.
-
-Definition lc := lc' 0.
-Definition open := open_rec 0.
-(* 
-Definition Progress := forall c e, 
-  lc e -> 
-  value e \/ (exists e' c', step c e c' e').
-
-Definition Preservation := forall c e c' e', 
-  lc e -> 
-  step c e c' e' -> 
-  lc e'. *)
 
 Definition retract_lc_rev_ite : forall (n : nat) (e : exp_ite exp),
-        lc' n (inj e) -> lc'_ite exp lc' n (inj e).
+            lc' n (inj e) -> lc'_ite exp lc' n (inj e).
 Proof.
     intros n e.
-    inversion 1; try (subst; easy).
+    inversion 1; subst; easy.
 Qed.
 
 Definition retract_lc_rev_lam : forall (n : nat) (e : exp_lam exp),
         lc' n (inj e) -> lc'_lam exp lc' n (inj e).
 Proof.
     intros n e.
-    inversion 1; try (subst; easy).
+    inversion 1; subst; easy.
+Qed.
+
+Definition retract_open_rec_rev_lam : forall (n : nat) s (e : exp_lam exp),
+            open_rec n s (inj e) = open_rec_lam _ open_rec n s e.
+Proof.
+    intros n s e.
+    simpl. easy.
+Qed.
+
+Definition retract_open_rec_rev_ite : forall (n : nat) s (e : exp_ite exp),
+            open_rec n s (inj e) = open_rec_ite _ open_rec n s e.
+Proof.
+    intros n s e.
+    simpl. easy.
 Qed.
 
 
-Fixpoint preservation : forall c e c' e', 
-  lc e -> 
-  step c e c' e' -> 
-  lc e'. 
-Proof. 
-    intros c e c' e'.
-    unfold lc in *.
-    induction 2.
-    - apply (preservation_lam _ open_rec lc' value _ step c s c' s'); easy.
-    - apply (preservation_ite _ lc' lc_in_ite retract_lc_rev_ite _ step preservation c s c' s'); easy.
-Defined.
+
+Lemma lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
+intros s n m n_le_m Hlc.
+inversion Hlc; subst.
+
+Qed.
+
+Fixpoint open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
+Proof.
+intros s t n H1 H2.
+inversion H2; subst.
+- apply (open_rec_lc_lam exp open_rec retract_open_rec_rev_lam lc' open_rec_lc lc_weaken lc_in_lam); easy.
+- apply (open_rec_lc_ite exp open_rec retract_open_rec_rev_ite lc' open_rec_lc lc_in_ite); easy.
+Qed.
+
+
+From Imp Require Import context.
+
+Module SIGNALS (Import Atom : ATOM) (Import String : STRING).
+
+    Module Import Env := Imp.context.Env (Atom) (String).
+
+    Inductive stored_val : Type := val_with_proof : forall (v : exp), value v -> stored_val.
+
+    Record Ctx := mkCtx {
+        store : Env.AtomEnv.t stored_val;
+        (* 
+            signalStore; 
+            hiddenGlobalState;
+            componentStore?
+        *)
+    }.
+
+    Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
+        | step_in_lam (c : Ctx) s c' s' : step_lam _ open_rec value _ step c s c' s' -> step c s c' s'
+        | step_in_ite (c : Ctx) s c' s' : step_ite _ _ step c s c' s'                -> step c s c' s'
+    .
+
+    Definition lc := lc' 0.
+    Definition open := open_rec 0.
+
+
+    Fixpoint preservation : forall c e c' e', 
+    lc e -> 
+    step c e c' e' -> 
+    lc e'. 
+    Proof. 
+        intros c e c' e'.
+        unfold lc in *.
+        induction 2.
+        - apply (preservation_lam exp open_rec lc' open_rec_lc lc_in_lam retract_lc_rev_lam value Ctx step preservation c s c' s'); easy.
+        - apply (preservation_ite exp lc' lc_in_ite retract_lc_rev_ite Ctx step preservation c s c' s'); easy.
+    Defined.
 
 End SIGNALS.
 
