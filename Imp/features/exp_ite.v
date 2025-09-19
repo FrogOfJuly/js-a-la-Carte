@@ -35,6 +35,15 @@ Section exp_ite.
     Variable retract_lc: forall n e, lc'_ite n e -> lc' n e.
     Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_ite n (inj e).
 
+    Definition lc_weaken_ite : forall s n m, n <= m -> lc'_ite n s -> lc' m s.
+    Proof.
+      intros s n m n_le_m H'. 
+      apply retract_lc.
+      induction H'.
+      - constructor; apply lc_weaken with (n := n); easy.
+      - constructor. 
+    Defined.
+
     Definition open_rec_lc_ite : forall s t n, lc' 0 s -> lc'_ite (S n) t -> lc' n (open_rec n s t).
     Proof.
         intros s t n H1 H2.

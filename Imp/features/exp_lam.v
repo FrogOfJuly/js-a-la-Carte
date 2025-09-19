@@ -43,14 +43,24 @@ Section exp_lam.
 
     Lemma nat_shenenigans : forall n m, n < S m -> n = m \/ n < m.
     Proof. 
-        intros n. 
-        induction n.
-        - intros m. destruct m. {left. easy. } right. apply PeanoNat.Nat.lt_0_succ.
-        - intros m H'. apply PeanoNat.lt_S_n in H'.
-          destruct m. {apply PeanoNat.Nat.nlt_0_r in H'. exfalso. easy. }
-          apply IHn in H'. destruct H' as [-> |  H']. {left. easy. }
-          right. rewrite <- PeanoNat.Nat.succ_lt_mono. easy.
+      intros n. 
+      induction n.
+      - intros m. destruct m. {left. easy. } right. lia.
+      - intros m H'. apply PeanoNat.lt_S_n in H'.
+        destruct m. { lia. }
+        apply IHn in H'. destruct H' as [-> |  H']. {left. easy. }
+        right. lia.
     Qed.
+
+    Definition lc_weaken_lam : forall s n m, n <= m -> lc'_lam n s -> lc' m s.
+    Proof.
+      intros s n m n_le_m H'. 
+      apply retract_lc.
+      induction H'.
+      - constructor; apply lc_weaken with (n := n); easy.
+      - constructor. apply lc_weaken with (n := S n). lia. easy.
+      - constructor. lia.
+    Defined.
 
     Definition open_rec_lc_lam : forall s t n, lc' 0 s -> lc'_lam (S n) t -> lc' n (open_rec n s t).
     Proof.

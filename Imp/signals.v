@@ -75,12 +75,11 @@ Proof.
     simpl. easy.
 Qed.
 
-
-
-Lemma lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
+Fixpoint lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
 intros s n m n_le_m Hlc.
 inversion Hlc; subst.
-
+- apply (lc_weaken_lam exp _ lc_weaken lc_in_lam _) with (n := n); easy.
+- apply (lc_weaken_ite exp _ lc_weaken lc_in_ite _) with (n := n); easy.
 Qed.
 
 Fixpoint open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
@@ -102,11 +101,6 @@ Module SIGNALS (Import Atom : ATOM) (Import String : STRING).
 
     Record Ctx := mkCtx {
         store : Env.AtomEnv.t stored_val;
-        (* 
-            signalStore; 
-            hiddenGlobalState;
-            componentStore?
-        *)
     }.
 
     Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
