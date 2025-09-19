@@ -11,9 +11,9 @@ Inductive exp : Type :=
     retract_R := fun x => match x with In_exp_lam t => Some t | _ => None end 
     }.
 Proof.
-    - intros x. reflexivity.
+    - intros x. easy.
     - intros x y H. destruct y; (try easy).
-      inversion H. subst. reflexivity.
+      inversion H. easy.
 Defined.
 
 #[refine] Global Instance retract_exp_exp_ite : retract (exp_ite exp) exp := { 
@@ -21,9 +21,9 @@ Defined.
     retract_R := fun x => match x with In_exp_ite t => Some t | _ => None end 
     }.
 Proof.
-    - intros x. reflexivity.
+    - intros x. easy.
     - intros x y H. destruct y; (try easy).
-      inversion H. subst. reflexivity.
+      inversion H. easy.
 Defined.
     
 Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp := 
