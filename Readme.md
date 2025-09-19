@@ -4,6 +4,8 @@ Inspiration is taken from [here](https://github.com/uds-psl/coq-a-la-carte-cpp20
 
 ## Build
 
+[Install opam](https://opam.ocaml.org/doc/Install.html)
+
 ```bash
 opam switch create modular_js --packages="ocaml-variants.4.14.0+options,ocaml-option-flambda"
 eval $(opam env)
