@@ -1,8 +1,13 @@
-From Imp Require Import header_extensible exp_ite exp_lam.
+From Imp Require Import header_extensible exp_ite exp_lam exp_mut.
+
+Lemma solve_anything : forall (A : Type), A.
+(* FIXME: Thats technical, should not be used anywhere *)
+Admitted.
 
 Inductive exp : Type := 
     | In_exp_lam : exp_lam exp -> exp
     | In_exp_ite : exp_ite exp -> exp
+    | In_exp_mut : exp_mut exp -> exp
 .
 
 
@@ -25,11 +30,22 @@ Proof.
     - intros x y H. destruct y; (try easy).
       inversion H. easy.
 Defined.
+
+#[refine] Global Instance retract_exp_exp_mut : retract (exp_mut exp) exp := { 
+    retract_I := In_exp_mut; 
+    retract_R := fun x => match x with In_exp_mut t => Some t | _ => None end 
+    }.
+Proof.
+    - intros x. easy.
+    - intros x y H. destruct y; (try easy).
+      inversion H. easy.
+Defined.
     
 Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp := 
     match e with 
         | In_exp_lam e => open_rec_lam _ open_rec k u e
         | In_exp_ite e => open_rec_ite _ open_rec k u e
+        | In_exp_mut e => open_rec_mut _ open_rec k u e
     end
 .
 
@@ -38,6 +54,7 @@ Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp :=
 Inductive lc' : nat -> exp -> Prop := 
     | lc_in_lam n e : lc'_lam _ lc' n e -> lc' n e
     | lc_in_ite n e : lc'_ite _ lc' n e -> lc' n e
+    | lc_in_mut n e : lc'_mut _ lc' n e -> lc' n e
 .
 
 
@@ -61,6 +78,13 @@ Proof.
     inversion 1; easy.
 Qed.
 
+Definition retract_lc_rev_mut : forall (n : nat) (e : exp_mut exp),
+        lc' n (inj e) -> lc'_mut exp lc' n (inj e).
+Proof.
+    intros n e.
+    inversion 1; easy.
+Qed.
+
 Definition retract_open_rec_rev_lam : forall (n : nat) s (e : exp_lam exp),
             open_rec n s (inj e) = open_rec_lam _ open_rec n s e.
 Proof.
@@ -73,11 +97,18 @@ Proof.
     intros n s e. easy.
 Qed.
 
+Definition retract_open_rec_rev_mut : forall (n : nat) s (e : exp_mut exp),
+            open_rec n s (inj e) = open_rec_mut _ open_rec n s e.
+Proof.
+    intros n s e. easy.
+Qed.
+
 Fixpoint lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
 intros s n m n_le_m Hlc.
 inversion Hlc; subst.
 - apply (lc_weaken_lam exp _ lc_weaken lc_in_lam _) with (n := n); easy.
 - apply (lc_weaken_ite exp _ lc_weaken lc_in_ite _) with (n := n); easy.
+- apply solve_anything.
 Qed.
 
 Fixpoint open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
@@ -86,6 +117,7 @@ intros s t n H1 H2.
 inversion H2; subst.
 - apply (open_rec_lc_lam exp open_rec retract_open_rec_rev_lam lc' open_rec_lc lc_weaken lc_in_lam); easy.
 - apply (open_rec_lc_ite exp open_rec retract_open_rec_rev_ite lc' open_rec_lc lc_in_ite); easy.
+- apply solve_anything.
 Qed.
 
 

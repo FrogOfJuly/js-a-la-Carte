@@ -21,8 +21,8 @@ Section exp_ite.
             | ite c t f => ite_ (open_rec k s c) (open_rec k s t) (open_rec k s f)
         end.
 
-      Variable retract_open_rec : forall (n : nat) s (e : exp_ite),
-            open_rec n s (inj e) = open_rec_ite n s e.
+    Variable retract_open_rec : forall (n : nat) s (e : exp_ite),
+          open_rec n s (inj e) = open_rec_ite n s e.
 
     Variable lc' : nat -> exp -> Prop.
     Variable open_rec_lc :forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
