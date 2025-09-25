@@ -1,9 +1,5 @@
 From Imp Require Import header_extensible exp_ite exp_lam exp_mut.
 
-Lemma solve_anything : forall (A : Type), A.
-(* FIXME: Thats technical, should not be used anywhere *)
-Admitted.
-
 Inductive exp : Type := 
     | In_exp_lam : exp_lam exp -> exp
     | In_exp_ite : exp_ite exp -> exp
@@ -61,6 +57,7 @@ Inductive lc' : nat -> exp -> Prop :=
 Inductive value : exp -> Prop := 
     | value_in_lam (e : exp) : value_lam _ lc' e -> value e
     | value_in_ite (e : exp) : value_ite _ e -> value e
+    | value_in_mut (e : exp) : value_mut _ e -> value e
 .
 
 
@@ -108,7 +105,7 @@ intros s n m n_le_m Hlc.
 inversion Hlc; subst.
 - apply (lc_weaken_lam exp _ lc_weaken lc_in_lam _) with (n := n); easy.
 - apply (lc_weaken_ite exp _ lc_weaken lc_in_ite _) with (n := n); easy.
-- apply solve_anything.
+- apply (lc_weaken_mut exp _ lc_weaken lc_in_mut _) with (n := n); easy.
 Qed.
 
 Fixpoint open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
@@ -117,43 +114,53 @@ intros s t n H1 H2.
 inversion H2; subst.
 - apply (open_rec_lc_lam exp open_rec retract_open_rec_rev_lam lc' open_rec_lc lc_weaken lc_in_lam); easy.
 - apply (open_rec_lc_ite exp open_rec retract_open_rec_rev_ite lc' open_rec_lc lc_in_ite); easy.
-- apply solve_anything.
+- apply (open_rec_lc_mut exp open_rec retract_open_rec_rev_mut lc' open_rec_lc lc_in_mut); easy.
 Qed.
 
+Fixpoint value_lc : forall v, value v -> lc' 0 v.
+Proof.
+    intros v. induction 1.
+    - apply (value_lc_lam _ _); easy.
+    - apply (value_lc_ite _ _ lc_in_ite); easy.
+    - apply (value_lc_mut _ _ lc_in_mut); easy.
+Qed.
 
 From Imp Require Import context.
 
-Module SIGNALS (Import Atom : ATOM) (Import String : STRING).
+Definition VarEnv := Env (sig value).
 
-    Module Import Env := Imp.context.Env (Atom) (String).
+Record Ctx := mkCtx {
+        store : VarEnv;
+}.
 
-    Inductive stored_val : Type := val_with_proof : forall (v : exp), value v -> stored_val.
+#[refine] Global Instance ctx_supports_store : hasProj Ctx VarEnv := {
+    get_proj := store;
+    set_proj := (fun x c => mkCtx x);
+}.
+Proof.
+    - intros. easy.
+    - intros. destruct c. simpl. easy.
+Defined.
 
-    Record Ctx := mkCtx {
-        store : Env.AtomEnv.t stored_val;
-    }.
+Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
+    | step_in_lam (c : Ctx) s c' s' : step_lam _ open_rec value _ step c s c' s' -> step c s c' s'
+    | step_in_ite (c : Ctx) s c' s' : step_ite _ _                step c s c' s' -> step c s c' s'
+    | step_in_mut (c : Ctx) s c' s' : step_mut _ _ _              step c s c' s' -> step c s c' s'
+.
 
-    Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
-        | step_in_lam (c : Ctx) s c' s' : step_lam _ open_rec value _ step c s c' s' -> step c s c' s'
-        | step_in_ite (c : Ctx) s c' s' : step_ite _ _ step c s c' s'                -> step c s c' s'
-    .
+Definition lc := lc' 0.
+Definition open := open_rec 0.
 
-    Definition lc := lc' 0.
-    Definition open := open_rec 0.
-
-
-    Fixpoint preservation : forall c e c' e', 
+Fixpoint preservation : forall c e c' e', 
     lc e -> 
     step c e c' e' -> 
     lc e'. 
-    Proof. 
-        intros c e c' e'.
-        unfold lc in *.
-        induction 2.
-        - apply (preservation_lam exp open_rec lc' open_rec_lc lc_in_lam retract_lc_rev_lam value Ctx step preservation c s c' s'); easy.
-        - apply (preservation_ite exp lc' lc_in_ite retract_lc_rev_ite Ctx step preservation c s c' s'); easy.
-    Defined.
-
-End SIGNALS.
-
+Proof. 
+    intros c e c' e'.
+    unfold lc in *.
+    induction 2.
+    - apply (preservation_lam exp open_rec lc' open_rec_lc lc_in_lam retract_lc_rev_lam value Ctx step preservation c s c' s'); easy.
+    - apply (preservation_ite exp lc' lc_in_ite retract_lc_rev_ite Ctx step preservation c s c' s'); easy.
+    - apply (preservation_mut exp lc' lc_in_mut retract_lc_rev_mut value value_lc Ctx step preservation c s c' s'); easy.
+Defined.
 

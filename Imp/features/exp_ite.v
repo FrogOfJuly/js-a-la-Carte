@@ -61,6 +61,11 @@ Section exp_ite.
         | value_false : value_ite (bool_lit_ false)
     .
 
+    Definition value_lc_ite : forall v, value_ite v -> lc' 0 v.
+    Proof.
+        intros. induction H0; apply retract_lc; constructor.
+    Defined.
+
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
@@ -88,10 +93,10 @@ Section exp_ite.
         - apply retract_lc_rev in lc_e.
           apply retract_lc.
           inversion lc_e. 
-          + apply retract_inj in H1. inversion H1. subst.
-            apply lc_ite; try assumption.
-            apply preservation in H0; easy.
-          + apply retract_inj in H3. easy.
+            + apply retract_inj in H1. inversion H1. subst.
+              apply lc_ite; try assumption.
+              apply preservation in H0; easy.
+            + apply retract_inj in H3. easy.
     Defined.
         
 End exp_ite.

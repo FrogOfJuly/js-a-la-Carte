@@ -4,6 +4,10 @@ From Equations Require Import Equations. (*  Equations.Prop.DepElim. *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 
+Lemma solve_anything : forall (A : Type), A.
+(* FIXME: That's technical, should not be used anywhere *)
+Admitted.
+
 Arguments eq_refl {A x}, {A} x.
 
 (** ** Basic definitions  *)
@@ -54,4 +58,3 @@ Lemma congr_inj {X Y} `{retract X Y} {x y}:
 Proof.
   congruence.
 Qed.
-

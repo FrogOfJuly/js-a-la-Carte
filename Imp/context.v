@@ -1,49 +1,22 @@
-From Stdlib Require Import Structures.Orders.
-From Stdlib Require Import Structures.OrderedType.
-From Stdlib Require Import Strings.String.
-From Stdlib Require Import Logic.Decidable.
-Set Implicit Arguments.
 
-Module Type STRING.
+From Stdlib Require Export FSets.FMapList.
+From Stdlib Require Import Structures.OrderedTypeEx.
 
- Parameter string : Set.
- Declare Module String_as_OT : UsualOrderedType with Definition t := string.
- Declare Module Ordered : Structures.OrderedType.OrderedType
-   with Definition t := string.
- Module OrderedTypeFacts := Structures.OrderedType.OrderedTypeFacts (Ordered).
- Parameter string_eq_dec : forall s1 s2 : string, {s1 = s2} + {~ s1 = s2}.
- Parameter string_dec_eq : forall s1 s2 : string, s1 = s2 \/ ~ s1 = s2.
+Module Import Env := Stdlib.FSets.FMapList.Make(Nat_as_OT).
 
-End STRING.
+Definition Env := Env.t.
 
-Module Type ATOM.
+Fact fresh_loc : forall {A} (e : Env A), exists l, Env.mem l e = false.
+Proof.
+    intros A e.
+Admitted.
 
-  Parameter atom : Set.
-  Declare Module Atom_as_OT : UsualOrderedType with Definition t := atom.
-  Declare Module Ordered : Structures.OrderedType.OrderedType 
-    with Definition t := atom.
-  Module OrderedTypeFacts := Structures.OrderedType.OrderedTypeFacts (Ordered).
-  Parameter atom_fresh_for_list : forall (xs : list atom), 
-    exists x : atom, ~ List.In x xs.
-  Parameter atom_eq_dec : forall a1 a2 : atom, {a1 = a2} + {~ a1 = a2}.
-  Parameter atom_dec_eq : forall a1 a2 : atom, a1 = a2 \/ ~ a1 = a2.
+Class hasProj C X := {
+    get_proj : C -> X;
+    set_proj : X -> C -> C;
+    set_idemp  : forall c x, get_proj (set_proj x c) = get_proj (set_proj x (set_proj x c));
+    get_set_id : forall c, set_proj (get_proj c) c = c
+}.
 
-End ATOM.
+    
 
-From Stdlib Require Import Arith.EqNat.
-From Stdlib Require Import FSets.FMapList.
-From Stdlib Require Import Strings.String.
-Require Import Datatypes.
-Set Implicit Arguments.
-
-Module Env (Import Atom : ATOM) (Import String : STRING).
-
-Module AtomEnv := FSets.FMapList.Make (Atom.Ordered).
-
-Definition atom := Atom.atom. (* free variables *)
-Definition loc := Atom.atom.
-Definition string := String.string.
-
-Parameter __proto__ : string.
-
-End Env.
