@@ -4,9 +4,9 @@ From Equations Require Import Equations. (*  Equations.Prop.DepElim. *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Lemma solve_anything : forall (A : Type), A.
+(* Lemma solve_anything : forall (A : Type), A.
 (* FIXME: That's technical, should not be used anywhere *)
-Admitted.
+Admitted. *)
 
 Arguments eq_refl {A x}, {A} x.
 
