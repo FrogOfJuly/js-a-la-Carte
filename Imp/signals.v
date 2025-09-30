@@ -278,6 +278,8 @@ Inductive step : Ctx -> exp -> Ctx -> exp -> Prop :=
     | step_in_ite (c : Ctx) s c' s' : step_ite _ _                step c s c' s' -> step c s c' s'
     | step_in_mut (c : Ctx) s c' s' : step_mut _ _ _              step c s c' s' -> step c s c' s'
     | step_in_err (c : Ctx) s c' s' : step_err _ _                step c s c' s' -> step c s c' s'
+    (* interactions *)
+    | step_in_lam_err (c : Ctx) s c' s' : step_int_lam_err _ value _ tag_of _ c s c' s' -> step c s c' s'
 .
 
 Definition lc := lc' 0.
@@ -295,5 +297,7 @@ Proof.
     - apply (preservation_ite exp lc' lc_in_ite retract_lc_rev_ite Ctx step preservation c s c' s'); easy.
     - apply (preservation_mut exp lc' lc_in_mut retract_lc_rev_mut value value_lc Ctx step preservation c s c' s'); easy.
     - apply (preservation_err exp lc' lc_in_err retract_lc_rev_err Ctx step preservation c s c' s'); easy.
+    (* interactions *)
+    - apply (preservation_lam_err exp lc' lc_in_err value value_lc tag tag_of Ctx c s c' s'); easy.
 Defined.
 
