@@ -1,4 +1,9 @@
-From Imp Require Import header_extensible exp_ite exp_lam exp_mut exp_err.
+From Imp Require Import header_extensible.
+(* Feature functors *)
+From Imp Require Import exp_ite exp_lam exp_mut exp_err.
+(* Interaction functors *)
+From Imp Require Import int_lam_err.
+
 
 Inductive exp : Type := 
     | In_exp_lam : exp_lam exp -> exp
@@ -153,6 +158,102 @@ Proof.
     - apply (value_lc_ite _ _ lc_in_ite); easy.
     - apply (value_lc_mut _ _ lc_in_mut); easy.
     - apply (value_lc_err _ _); easy.
+Qed.
+
+Inductive tag := 
+    | In_tag_lam : tag_lam -> tag
+    | In_tag_ite : tag_ite -> tag
+    | In_tag_mut : tag_mut -> tag
+    | In_tag_err : tag_err -> tag
+.
+
+#[refine] Global Instance retract_tag_tag_ite : retract tag_ite tag := { 
+    retract_I := In_tag_ite; 
+    retract_R := fun x => match x with In_tag_ite t => Some t | _ => None end 
+    }.
+Proof.
+    - intros. reflexivity.
+    - intros x y. destruct y; try easy.
+      inversion 1. congruence.
+Defined.
+
+#[refine] Global Instance retract_tag_tag_lam : retract tag_lam tag := { 
+    retract_I := In_tag_lam; 
+    retract_R := fun x => match x with In_tag_lam t => Some t | _ => None end 
+    }.
+Proof.
+    - intros. reflexivity.
+    - intros x y. destruct y; try easy.
+      inversion 1. congruence.
+Defined.
+
+#[refine] Global Instance retract_tag_tag_mut : retract tag_mut tag := { 
+    retract_I := In_tag_mut; 
+    retract_R := fun x => match x with In_tag_mut t => Some t | _ => None end 
+    }.
+Proof.
+    - intros. reflexivity.
+    - intros x y. destruct y; try easy.
+      inversion 1. congruence.
+Defined.
+
+#[refine] Global Instance retract_tag_tag_err : retract tag_err tag := { 
+    retract_I := In_tag_err; 
+    retract_R := fun x => match x with In_tag_err t => Some t | _ => None end 
+    }.
+Proof.
+    - intros. reflexivity.
+    - intros x y. destruct y; easy.
+Defined.
+
+Inductive tag_of : exp -> tag -> Prop := 
+    | tag_of_in_lam e t: tag_of_lam _ _ e t -> tag_of e t
+    | tag_of_in_ite e t: tag_of_ite _ _ e t -> tag_of e t
+    | tag_of_in_mut e t: tag_of_mut _ _ e t -> tag_of e t
+    | tag_of_in_err e t: tag_of_err _ _ e t -> tag_of e t 
+.
+
+Lemma retract_tag_of_lam : forall (t : tag_lam) (e : exp_lam exp), tag_of (inj e) (inj t) <-> tag_of_lam _ _ (inj e) (inj t).
+Proof.
+    intros t e.
+    split.
+    - inversion 1; easy.
+    - constructor; easy.
+Qed.
+
+Lemma retract_tag_of_ite : forall (t : tag_ite) (e : exp_ite exp), tag_of (inj e) (inj t) <-> tag_of_ite _ _ (inj e) (inj t).
+Proof.
+    intros t e.
+    split.
+    - inversion 1; easy.
+    - constructor; easy.
+Qed.
+
+Lemma retract_tag_of_mut: forall (t : tag_mut) (e : exp_mut exp), tag_of (inj e) (inj t) <-> tag_of_mut _ _ (inj e) (inj t).
+Proof.
+    intros t e.
+    split.
+    - inversion 1; easy.
+    - constructor; easy.
+Qed.
+
+Lemma retract_tag_of_err : forall (t : tag_err) (e : exp_err exp), tag_of (inj e) (inj t) <-> tag_of_err _ _ (inj e) (inj t).
+Proof.
+    intros t e.
+    split.
+    - inversion 1; easy.
+    - constructor; easy.
+Qed.
+
+Lemma tag_of_decidable e t : ~tag_of e t \/ tag_of e t.
+Proof.
+    destruct e; destruct t.
+    all: try (rewrite retract_tag_of_lam; apply tag_of_decidable_lam).
+    all: try (rewrite retract_tag_of_ite; apply tag_of_decidable_ite).
+    all: try (rewrite retract_tag_of_mut; apply tag_of_decidable_mut).
+    all: try (rewrite retract_tag_of_mut; apply tag_of_decidable_mut).
+    all: try (rewrite retract_tag_of_err; apply tag_of_decidable_err).
+    all: left; inversion 1; inversion H0.
 Qed.
 
 From Imp Require Import context.

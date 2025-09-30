@@ -66,6 +66,32 @@ Section exp_ite.
         intros. induction H0; apply retract_lc; constructor.
     Defined.
 
+    Variable tag : Type.
+    
+    Inductive tag_ite := 
+      | tag_bool  : tag_ite
+    .
+
+    Context `{Htag : retract tag_ite tag}.
+
+    Definition tag_bool_ := inj tag_bool.
+
+    Inductive tag_of_ite : exp -> tag -> Prop :=
+      | tag_of_true : tag_of_ite (bool_lit_ true) tag_bool_
+      | tag_of_false : tag_of_ite (bool_lit_ false) tag_bool_
+    .
+
+    Lemma tag_of_decidable_ite : forall (e : exp_ite) (t : tag_ite), ~tag_of_ite (inj e) (inj t) \/ tag_of_ite (inj e) (inj t).
+    Proof.
+      intros. destruct e; destruct t;
+      try (right; destruct b; constructor).
+      all: left; inversion 1.
+      all: try apply retract_inj in H0.
+      all: try apply retract_inj in H1.
+      all: try apply retract_inj in H2.
+      all: easy.
+    Defined.
+
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.

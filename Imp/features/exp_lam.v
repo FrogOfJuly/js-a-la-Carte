@@ -100,6 +100,34 @@ Section exp_lam.
     Defined.
 
 
+    Variable tag : Type.
+    
+    Inductive tag_lam := 
+      | tag_ab  : tag_lam
+      | tag_var : tag_lam
+    .
+
+    Context `{Htag : retract tag_lam tag}.
+
+    Definition tag_ab_ := inj tag_ab.
+    Definition tag_var_ := inj tag_var.
+
+    Inductive tag_of_lam : exp -> tag -> Prop :=
+      | tag_of_abs e : tag_of_lam (ab_ e) tag_ab_
+      | tag_of_var n : tag_of_lam (bvar_ n) tag_var_
+    .
+
+    Lemma tag_of_decidable_lam : forall (e : exp_lam) (t : tag_lam), ~tag_of_lam (inj e) (inj t) \/ tag_of_lam (inj e) (inj t).
+    Proof.
+      intros. destruct e; destruct t;
+      try (right; constructor).
+      all: left; inversion 1.
+      all: try apply retract_inj in H2.
+      all: try apply retract_inj in H3.
+      all: easy.
+    Defined.
+
+
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.

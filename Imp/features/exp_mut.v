@@ -94,6 +94,29 @@ Section exp_mut.
         intros. induction H. apply retract_lc. constructor.
     Defined.
 
+    Variable tag : Type.
+    
+    Inductive tag_mut := 
+      | tag_loc  : tag_mut
+    .
+
+    Context `{Htag : retract tag_mut tag}.
+
+    Definition tag_loc_ := inj tag_loc.
+
+    Inductive tag_of_mut : exp -> tag -> Prop :=
+      | tag_of_loc l : tag_of_mut (exp_loc_ l) tag_loc_
+    .
+
+    Lemma tag_of_decidable_mut : forall (e : exp_mut) (t : tag_mut), ~tag_of_mut (inj e) (inj t) \/ tag_of_mut (inj e) (inj t).
+    Proof.
+      intros. destruct e; destruct t;
+      try (right; constructor).
+      all: left; inversion 1.
+      all: try apply retract_inj in H1.
+      all: easy.
+    Defined.
+
     Variable Ctx : Type.
     Context `{hasProj Ctx (Env (sig value))}.
 

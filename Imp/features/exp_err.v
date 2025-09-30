@@ -7,7 +7,7 @@ Section exp_err.
         | err (e : exp) : exp_err
     .
 
-    Context `{retract exp_err exp}.
+    Context `{Herr : retract exp_err exp}.
 
     Definition err_  (e : exp) : _ := inj (err e).
 
@@ -58,6 +58,22 @@ Section exp_err.
         intros v. induction 1.
     Defined.
 
+    Variable tag : Type.
+    
+    Inductive tag_err := 
+    .
+
+    Context `{Htag : retract tag_err tag}.
+
+    Inductive tag_of_err : exp -> tag -> Prop :=
+    .
+
+    Lemma tag_of_decidable_err : forall (e : exp_err) (t : tag_err), ~tag_of_err (inj e) (inj t) \/ tag_of_err (inj e) (inj t).
+    Proof.
+      intros. destruct e; destruct t;
+      left; inversion 1.
+    Defined.
+
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
@@ -74,7 +90,7 @@ Section exp_err.
         induction 1.
         apply retract_lc_rev in lc_e.
         inversion lc_e. subst.
-        apply retract_inj in H1. inversion H1. subst.
+        apply retract_inj in H0. inversion H0. subst.
         apply retract_lc. constructor.
         apply (preservation c e c' e'); easy.
     Defined.
