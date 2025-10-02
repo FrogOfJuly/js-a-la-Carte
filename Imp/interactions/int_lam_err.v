@@ -32,6 +32,12 @@ Section int_exp_lam.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
 
     Inductive step_int_lam_err : Ctx -> exp -> Ctx -> exp -> Prop := 
+        | step_bad_right f c e c' e': 
+            step c e c' (err_ _ e') -> 
+            step_int_lam_err c (app_ _ f e) c' (err_ _ e')
+        | step_bad_left arg c e c' e': 
+            step c e c' (err_ _ e') -> 
+            step_int_lam_err c (app_ _ e arg) c' (err_ _ e')
         | step_bad_beta c ab arg: 
             value ab  -> 
             value arg  -> 
@@ -43,7 +49,21 @@ Section int_exp_lam.
     Proof. 
         intros c e c' e' lc_e.
         induction 1.
-        apply retract_lc_err. constructor.
-        apply value_lc. easy.
+        - apply retract_lc_err. constructor. apply preservation in H.
+          + apply retract_lc_rev_err in H. inversion H. 
+            apply retract_inj in H0. inversion H0. subst.
+            easy.
+          + apply retract_lc_rev_lam in lc_e. inversion lc_e. 
+            apply retract_inj in H0. inversion H0. { subst. easy. }
+            all: subst; apply retract_inj in H0; inversion H0.
+        - apply retract_lc_err. constructor. apply preservation in H.
+          + apply retract_lc_rev_err in H. inversion H. 
+            apply retract_inj in H0. inversion H0. subst.
+            easy.
+          + apply retract_lc_rev_lam in lc_e. inversion lc_e. 
+            apply retract_inj in H0. inversion H0. { subst. easy. }
+            all: subst; apply retract_inj in H0; inversion H0.
+        - apply retract_lc_err. constructor.
+          apply value_lc. easy.
     Defined.
 End int_exp_lam.
