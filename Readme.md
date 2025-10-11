@@ -2,7 +2,7 @@
 
 Inspiration is taken from [here](https://github.com/uds-psl/coq-a-la-carte-cpp20/tree/master).
 
-For ongoin progress look into dev branch or [pull requst](https://github.com/FrogOfJuly/js-a-la-Carte/pull/1).
+For ongoing progress look into dev branch or [pull requst](https://github.com/FrogOfJuly/js-a-la-Carte/pull/1).
 
 ## Build
 
