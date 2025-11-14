@@ -146,6 +146,7 @@ Section exp_mut.
             step c s c' s' -> step_mut c (exp_deref_ s) c (exp_deref_ s')
         (* reference *)
         | step_ref c v c' l : 
+            (* TODO: generate new label instead? *)
             Env.mem l (get_proj c) = false ->
             step_mut c (exp_ref_ v) c' (exp_loc_ l)
         | step_ref_red c s c' s': 

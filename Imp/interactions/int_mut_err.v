@@ -28,14 +28,96 @@ Section int_exp_mut.
     Context `{Hmut_tag : retract tag_mut tag}.
 
     Variable Ctx : Type.
+    Context `{hasProj Ctx (Env (sig value))}.
+
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
 
     Inductive step_int_mut_err : Ctx -> exp -> Ctx -> exp -> Prop := 
-        
+        | step_bad_setref c l v (vp : value v):
+            Env.mem l (get_proj c) = false ->
+            step_int_mut_err c (exp_setref_ _ (exp_loc_ _ l) v) c (err_ _ (exp_loc_ _ l))
+        | step_bad_deref c l: 
+            Env.find l (get_proj c) = None -> 
+            step_int_mut_err c (exp_deref_ _ (exp_loc_ _ l)) c (err_ _ (exp_loc_ _ l))
+        (* Bad reduction propagation *)
+        | step_setref_red l c s c' s': 
+            step c s c' (err_ _ s') -> 
+            step_int_mut_err c (exp_setref_ _ (exp_loc_ _ l) s) c' (err_ _ s')
+        | step_ref_red c s c' s': 
+            step c s c' (err_ _ s') -> 
+            step_int_mut_err c (exp_ref_ _ s) c' (err_ _ s')
+        (* Bad labels *)
+        | step_bad_label_setref c e v: 
+            ~ tag_of e (tag_loc_ _) ->
+            step_int_mut_err c (exp_setref_ _ e v) c (err_ _ e)
+        | step_bad_label_deref c e : 
+            ~ tag_of e (tag_loc_ _) ->
+            step_int_mut_err c (exp_deref_ _ e) c (err_ _ e)
         . 
 
     Definition preservation_mut_err : forall c e c' e', lc' 0 e -> step_int_mut_err c e c' e' -> lc' 0 e'.
     Proof. 
-    Admitted.
+        intros c e c' e' lc_e.
+        induction 1. 
+        - apply retract_lc_err. constructor.
+          apply retract_lc_mut. constructor.
+        - apply retract_lc_err. constructor.
+          apply retract_lc_mut. constructor.
+        - apply preservation in H0; try easy.
+          remember (exp_setref exp (exp_loc_ exp l) s) as e.
+          apply retract_lc_rev_mut in lc_e.
+          inversion lc_e.
+          + subst. apply retract_inj in H3.
+            inversion H3.
+          + apply retract_inj in H1.
+            subst e. inversion H1.
+            subst. easy.
+          + subst. apply retract_inj in H1.
+            inversion H1.
+          + subst. apply retract_inj in H1.
+            inversion H1.
+        - apply preservation in H0; try easy.
+          apply retract_lc_rev_mut in lc_e.
+          remember (exp_ref exp s) as e.
+          inversion lc_e.
+          + subst. apply retract_inj in H3.
+            inversion H3.
+          + subst. apply retract_inj in H1.
+            inversion H1.
+          + subst. apply retract_inj in H1.
+            inversion H1.
+          + subst. apply retract_inj in H1.
+            inversion H1. subst. easy.
+        - apply retract_lc_rev_mut in lc_e.
+          remember (exp_setref exp e v) as e'.
+          inversion lc_e.
+          + subst. apply retract_inj in H3.
+            inversion H3.
+          + subst. apply retract_inj in H1.
+            inversion H1. subst.
+            apply retract_lc_err. constructor. easy.
+          + subst. apply retract_inj in H1.
+            inversion H1.
+          + subst. apply retract_inj in H1.
+            inversion H1. 
+        - apply retract_lc_rev_mut in lc_e.
+          remember (exp_deref exp e) as e'.
+          inversion lc_e.
+          + subst. apply retract_inj in H3.
+            inversion H3.
+          + subst. apply retract_inj in H1.
+            inversion H1.
+          + subst. apply retract_inj in H1.
+            inversion H1. subst.
+            apply retract_lc_err. constructor. easy.
+          + subst. apply retract_inj in H1.
+            inversion H1. 
+    Defined.
+            
+
+          
+          
+          
+    
 End int_exp_mut.

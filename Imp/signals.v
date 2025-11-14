@@ -2,7 +2,7 @@ From Imp Require Import header_extensible.
 (* Feature functors *)
 From Imp Require Import exp_ite exp_lam exp_mut exp_err.
 (* Interaction functors *)
-From Imp Require Import int_lam_err.
+From Imp Require Import int_lam_err int_ite_err int_mut_err.
 
 
 Inductive exp : Type := 
@@ -280,6 +280,8 @@ Inductive step : Ctx -> exp -> Ctx -> exp -> Prop :=
     | step_in_err (c : Ctx) s c' s' : step_err _ _                step c s c' s' -> step c s c' s'
     (* interactions *)
     | step_in_lam_err (c : Ctx) s c' s' : step_int_lam_err _ value _ tag_of _ step c s c' s' -> step c s c' s'
+    | step_in_ite_err (c : Ctx) s c' s' : step_int_ite_err _ value _ tag_of _ step c s c' s' -> step c s c' s'
+    | step_in_mut_err (c : Ctx) s c' s' : step_int_mut_err _ value _ tag_of _ step c s c' s' -> step c s c' s'
 .
 
 Definition lc := lc' 0.
@@ -299,5 +301,7 @@ Proof.
     - apply (preservation_err exp lc' lc_in_err retract_lc_rev_err Ctx step preservation c s c' s'); easy.
     (* interactions *)
     - apply (preservation_lam_err exp lc' lc_in_err retract_lc_rev_lam retract_lc_rev_err value value_lc tag tag_of Ctx step preservation c s c' s'); easy.
+    - apply (preservation_ite_err exp lc' lc_in_err retract_lc_rev_ite retract_lc_rev_err value value_lc tag tag_of Ctx step preservation c s c' s'); easy.
+    - apply (preservation_mut_err exp lc' lc_in_mut lc_in_err retract_lc_rev_mut value tag tag_of Ctx step preservation c s c' s'); easy.
 Defined.
 
