@@ -40,6 +40,12 @@ Section exp_lam.
 
     Variable retract_lc: forall n e, lc'_lam n e -> lc' n e.
     Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_lam n (inj e).
+    
+    Lemma lc_ab_inv : forall s n, lc' n (ab_ s) -> lc' (S n) s.
+      intros s n Hlc.
+      apply retract_lc_rev in Hlc. inversion Hlc; subst; try (apply retract_inj in H0; easy).
+      apply retract_inj in H0. inversion H0. subst. easy.
+    Qed.
 
     Lemma nat_shenenigans : forall n m, n < S m -> n = m \/ n < m.
     Proof. 
@@ -82,11 +88,45 @@ Section exp_lam.
     Defined.    
 
     Variable value : exp -> Prop.
+    Variable value_lc : forall v, value v -> lc' 0 v.
 
     Inductive value_lam : exp -> Prop := 
         | value_ab (t : exp) : lc' 0 (ab_ t) -> value_lam (ab_ t)
-        | value_bvar (n : nat) : value_lam (bvar_ n)
     .
+
+    Definition value_lc_lam : forall v, value_lam v -> lc' 0 v.
+    Proof.
+        intros. inversion H0. easy.
+    Defined.
+
+
+    Variable tag : Type.
+    
+    Inductive tag_lam := 
+      | tag_ab  : tag_lam
+      | tag_var : tag_lam
+    .
+
+    Context `{Htag : retract tag_lam tag}.
+
+    Definition tag_ab_ := inj tag_ab.
+    Definition tag_var_ := inj tag_var.
+
+    Inductive tag_of_lam : exp -> tag -> Prop :=
+      | tag_of_abs e : tag_of_lam (ab_ e) tag_ab_
+      | tag_of_var n : tag_of_lam (bvar_ n) tag_var_
+    .
+
+    Lemma tag_of_decidable_lam : forall (e : exp_lam) (t : tag_lam), ~tag_of_lam (inj e) (inj t) \/ tag_of_lam (inj e) (inj t).
+    Proof.
+      intros. destruct e; destruct t;
+      try (right; constructor).
+      all: left; inversion 1.
+      all: try apply retract_inj in H2.
+      all: try apply retract_inj in H3.
+      all: easy.
+    Defined.
+
 
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
@@ -98,12 +138,6 @@ Section exp_lam.
         | stepAppL   ctx s ctx' s' t : value t -> step ctx s ctx' s' -> step_lam ctx (app_ s t) ctx' (app_ s' t)
         | stepAppR s ctx t ctx' t'   : step ctx t ctx' t' -> step_lam ctx (app_ s t) ctx' (app_ s t')
     .
-
-    Lemma lc_ab_inv : forall s n, lc' n (ab_ s) -> lc' (S n) s.
-    intros s n Hlc.
-    apply retract_lc_rev in Hlc. inversion Hlc; subst; try (apply retract_inj in H0; easy).
-    apply retract_inj in H0. inversion H0. subst. easy.
-    Qed.
 
 
     Definition preservation_lam : forall c e c' e', lc' 0 e -> step_lam c e c' e' -> lc' 0 e'.

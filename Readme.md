@@ -1,4 +1,4 @@
-# Modular take on Javascript encoding in Rocq
+# Modular take on Javascript formalization in Rocq
 
 Inspiration is taken from [here](https://github.com/uds-psl/coq-a-la-carte-cpp20/tree/master).
 

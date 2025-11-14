@@ -21,8 +21,8 @@ Section exp_ite.
             | ite c t f => ite_ (open_rec k s c) (open_rec k s t) (open_rec k s f)
         end.
 
-      Variable retract_open_rec : forall (n : nat) s (e : exp_ite),
-            open_rec n s (inj e) = open_rec_ite n s e.
+    Variable retract_open_rec : forall (n : nat) s (e : exp_ite),
+          open_rec n s (inj e) = open_rec_ite n s e.
 
     Variable lc' : nat -> exp -> Prop.
     Variable open_rec_lc :forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
@@ -61,6 +61,37 @@ Section exp_ite.
         | value_false : value_ite (bool_lit_ false)
     .
 
+    Definition value_lc_ite : forall v, value_ite v -> lc' 0 v.
+    Proof.
+        intros. induction H0; apply retract_lc; constructor.
+    Defined.
+
+    Variable tag : Type.
+    
+    Inductive tag_ite := 
+      | tag_bool  : tag_ite
+    .
+
+    Context `{Htag : retract tag_ite tag}.
+
+    Definition tag_bool_ := inj tag_bool.
+
+    Inductive tag_of_ite : exp -> tag -> Prop :=
+      | tag_of_true : tag_of_ite (bool_lit_ true) tag_bool_
+      | tag_of_false : tag_of_ite (bool_lit_ false) tag_bool_
+    .
+
+    Lemma tag_of_decidable_ite : forall (e : exp_ite) (t : tag_ite), ~tag_of_ite (inj e) (inj t) \/ tag_of_ite (inj e) (inj t).
+    Proof.
+      intros. destruct e; destruct t;
+      try (right; destruct b; constructor).
+      all: left; inversion 1.
+      all: try apply retract_inj in H0.
+      all: try apply retract_inj in H1.
+      all: try apply retract_inj in H2.
+      all: easy.
+    Defined.
+
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
@@ -88,10 +119,10 @@ Section exp_ite.
         - apply retract_lc_rev in lc_e.
           apply retract_lc.
           inversion lc_e. 
-          + apply retract_inj in H1. inversion H1. subst.
-            apply lc_ite; try assumption.
-            apply preservation in H0; easy.
-          + apply retract_inj in H3. easy.
+            + apply retract_inj in H1. inversion H1. subst.
+              apply lc_ite; try assumption.
+              apply preservation in H0; easy.
+            + apply retract_inj in H3. easy.
     Defined.
         
 End exp_ite.
