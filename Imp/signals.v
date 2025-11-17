@@ -12,46 +12,26 @@ Inductive exp : Type :=
     | In_exp_err : exp_err exp -> exp
 .
 
+Ltac exact_constructor := match goal with 
+    | [|- exp_lam exp -> exp] => exact In_exp_lam
+    | [|- exp_ite exp -> exp] => exact In_exp_ite
+    | [|- exp_mut exp -> exp] => exact In_exp_mut
+    | [|- exp_err exp -> exp] => exact In_exp_err
+end.
 
-#[refine] Global Instance retract_exp_exp_lam : retract (exp_lam exp) exp := { 
-    retract_I := In_exp_lam; 
-    retract_R := fun x => match x with In_exp_lam t => Some t | _ => None end 
-    }.
-Proof.
-    - intros x. easy.
-    - intros x y H. destruct y; (try easy).
-      inversion H. easy.
-Defined.
+Ltac derive_retract_instance := match goal with 
+    [|- retract ?X ?Y] => exact (@Build_retract X Y 
+                                    ltac:(exact_constructor)
+                                    ltac:(intros x; destruct x; try (apply Some; assumption); exact None)
+                                    ltac:(simpl; intros; trivial)
+                                    ltac:(simpl; intros x y H; destruct y; inversion H; easy)
+    )
+end.
 
-#[refine] Global Instance retract_exp_exp_ite : retract (exp_ite exp) exp := { 
-    retract_I := In_exp_ite; 
-    retract_R := fun x => match x with In_exp_ite t => Some t | _ => None end 
-    }.
-Proof.
-    - intros x. easy.
-    - intros x y H. destruct y; (try easy).
-      inversion H. easy.
-Defined.
-
-#[refine] Global Instance retract_exp_exp_mut : retract (exp_mut exp) exp := { 
-    retract_I := In_exp_mut; 
-    retract_R := fun x => match x with In_exp_mut t => Some t | _ => None end 
-    }.
-Proof.
-    - intros x. easy.
-    - intros x y H. destruct y; (try easy).
-      inversion H. easy.
-Defined.
-
-#[refine] Global Instance retract_exp_exp_err : retract (exp_err exp) exp := { 
-    retract_I := In_exp_err; 
-    retract_R := fun x => match x with In_exp_err t => Some t | _ => None end 
-    }.
-Proof.
-    - intros x. easy.
-    - intros x y H. destruct y; (try easy).
-      inversion H. easy.
-Defined.
+#[refine] Global Instance retract_exp_exp_lam : retract (exp_lam exp) exp := ltac:(derive_retract_instance). Defined.
+#[refine] Global Instance retract_exp_exp_ite : retract (exp_ite exp) exp := ltac:(derive_retract_instance). Defined.
+#[refine] Global Instance retract_exp_exp_mut : retract (exp_mut exp) exp := ltac:(derive_retract_instance). Defined.
+#[refine] Global Instance retract_exp_exp_err : retract (exp_err exp) exp := ltac:(derive_retract_instance). Defined.
     
 Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp := 
     match e with 
@@ -61,7 +41,6 @@ Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp :=
         | In_exp_err e => open_rec_err _ open_rec k u e
     end
 .
-
 
 
 Inductive lc' : nat -> exp -> Prop := 
@@ -79,58 +58,22 @@ Inductive value : exp -> Prop :=
     | value_in_err (e : exp) : value_err _ e -> value e
 .
 
+Definition retract_lc_revT exp_ext lc'_ext { retr : retract_f exp_ext exp} : Prop :=
+    forall (n : nat) (e : exp_ext exp), lc' n (inj e) -> lc'_ext retr lc' n (inj e). 
 
-Definition retract_lc_rev_ite : forall (n : nat) (e : exp_ite exp),
-            lc' n (inj e) -> lc'_ite exp lc' n (inj e).
-Proof.
-    intros n e.
-    inversion 1; easy.
-Qed.
+Definition retract_lc_rev_lam : retract_lc_revT exp_lam (@lc'_lam exp) := ltac:(intros n e; inversion 1; easy).
+Definition retract_lc_rev_ite : retract_lc_revT exp_ite (@lc'_ite exp) := ltac:(intros n e; inversion 1; easy).
+Definition retract_lc_rev_mut : retract_lc_revT exp_mut (@lc'_mut exp) := ltac:(intros n e; inversion 1; easy).
+Definition retract_lc_rev_err : retract_lc_revT exp_err (@lc'_err exp) := ltac:(intros n e; inversion 1; easy).
 
-Definition retract_lc_rev_lam : forall (n : nat) (e : exp_lam exp),
-        lc' n (inj e) -> lc'_lam exp lc' n (inj e).
-Proof.
-    intros n e.
-    inversion 1; easy.
-Qed.
+Definition retract_open_rec_rev exp_ext open_rec_ext  { retr : retract_f exp_ext exp } : Prop :=
+    forall (n : nat) s (e : exp_ext exp), open_rec n s (inj e) = open_rec_ext retr open_rec n s e.
 
-Definition retract_lc_rev_mut : forall (n : nat) (e : exp_mut exp),
-        lc' n (inj e) -> lc'_mut exp lc' n (inj e).
-Proof.
-    intros n e.
-    inversion 1; easy.
-Qed.
+Definition retract_open_rec_rev_lam : retract_open_rec_rev exp_lam (@open_rec_lam exp) := ltac:(intros; easy).
+Definition retract_open_rec_rev_ite : retract_open_rec_rev exp_ite (@open_rec_ite exp) := ltac:(intros; easy).
+Definition retract_open_rec_rev_mut : retract_open_rec_rev exp_mut (@open_rec_mut exp) := ltac:(intros; easy).
+Definition retract_open_rec_rev_err : retract_open_rec_rev exp_err (@open_rec_err exp) := ltac:(intros; easy).
 
-Definition retract_lc_rev_err : forall (n : nat) (e : exp_err exp),
-        lc' n (inj e) -> lc'_err exp lc' n (inj e).
-Proof.
-    intros n e.
-    inversion 1; easy.
-Qed.
-
-Definition retract_open_rec_rev_lam : forall (n : nat) s (e : exp_lam exp),
-            open_rec n s (inj e) = open_rec_lam _ open_rec n s e.
-Proof.
-    intros n s e. easy.
-Qed.
-
-Definition retract_open_rec_rev_ite : forall (n : nat) s (e : exp_ite exp),
-            open_rec n s (inj e) = open_rec_ite _ open_rec n s e.
-Proof.
-    intros n s e. easy.
-Qed.
-
-Definition retract_open_rec_rev_mut : forall (n : nat) s (e : exp_mut exp),
-            open_rec n s (inj e) = open_rec_mut _ open_rec n s e.
-Proof.
-    intros n s e. easy.
-Qed.
-
-Definition retract_open_rec_rev_err : forall (n : nat) s (e : exp_err exp),
-            open_rec n s (inj e) = open_rec_err _ open_rec n s e.
-Proof.
-    intros n s e. easy.
-Qed.
 
 Fixpoint lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
 intros s n m n_le_m Hlc.
