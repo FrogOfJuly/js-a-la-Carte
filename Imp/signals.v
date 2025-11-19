@@ -4,8 +4,6 @@ From Imp Require Import exp_ite exp_lam exp_mut exp_err.
 (* Interaction functors *)
 From Imp Require Import int_lam_err int_ite_err int_mut_err.
 
-From elpi Require Import elpi.
-
 
 Inductive exp : Type := 
     | In_exp_lam : exp_lam exp -> exp
