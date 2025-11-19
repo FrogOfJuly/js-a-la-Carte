@@ -46,7 +46,7 @@ Definition lift {X Y Y'} `{retract Y Y'} (f : X -> Y) := (fun n => retract_I (f 
 Notation inj := (retract_I).
 Notation retr := (retract_R).
 
-Notation included F T := (retract (F T) T)%type.
+Notation retract_f F T := (retract (F T) T)%type.
 
 Class Bundle (func : Type -> Type) (In : forall X, X -> func X -> Prop) := make_Bundle {}.
 Existing Instance make_Bundle.
