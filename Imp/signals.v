@@ -4,6 +4,8 @@ From Imp Require Import exp_ite exp_lam exp_mut exp_err.
 (* Interaction functors *)
 From Imp Require Import int_lam_err int_ite_err int_mut_err.
 
+From elpi Require Import elpi.
+
 
 Inductive exp : Type := 
     | In_exp_lam : exp_lam exp -> exp
@@ -12,12 +14,32 @@ Inductive exp : Type :=
     | In_exp_err : exp_err exp -> exp
 .
 
-Ltac exact_constructor := match goal with 
-    | [|- exp_lam exp -> exp] => exact In_exp_lam
-    | [|- exp_ite exp -> exp] => exact In_exp_ite
-    | [|- exp_mut exp -> exp] => exact In_exp_mut
-    | [|- exp_err exp -> exp] => exact In_exp_err
-end.
+Elpi Tactic exact_constructor_elpi.
+Elpi Accumulate lp:{{
+    solve (goal _ _ Ty _ [str IndName] as G) GL :- !, 
+        % locate inductive type
+        std.assert! (coq.locate IndName (indt IndTyGRef)) "not an inductive type",
+        % locate constructors Constr of inductive type IndTyGRef
+        coq.env.indt IndTyGRef _ _ _ _ Constr _,
+        % find corresponding terms(ConstrTerms) by querying environment(env.global) for constructor symbols
+        % by relating output `r` to `indc c`
+        std.map Constr (c\ r\ coq.env.global (indc c) r) ConstrTerms,
+        % find their types by typechecking found terms by coq.typecheck
+        % saving them into ConstrTypes
+        std.map ConstrTerms (kt\ r\ coq.typecheck kt r _) ConstrTypes,
+        % relate constructors to their types them together to establish correspondence
+        % by zipping them together
+        std.zip ConstrTerms ConstrTypes TermTypes,
+        % find term corresponding to goal type
+        std.mem TermTypes (pr C Ty),
+        % use it
+        refine C G GL.
+    solve (goal _ _ Ty _ [str IndName] as _G) _GL :- 
+        coq.say "Failed to solve" Ty  "with exact constructors of type" IndName, 
+        coq.ltac.fail _ "fail".
+}}.
+
+Ltac exact_constructor := elpi exact_constructor_elpi exp.
 
 Ltac derive_retract_instance := match goal with 
     [|- retract ?X ?Y] => exact (@Build_retract X Y 
@@ -57,6 +79,20 @@ Inductive value : exp -> Prop :=
     | value_in_mut (e : exp) : value_mut _ e -> value e
     | value_in_err (e : exp) : value_err _ e -> value e
 .
+
+#[arguments(raw)] Elpi Command build_retract_lc_rev_type.
+Elpi Accumulate lp:{{ 
+    main [trm LcExt, trm ExpExt] :- 
+        std.assert-ok! (coq.typecheck ExpExt TyExp) "argument illtyped",
+        std.assert-ok! (coq.typecheck LcExt {{ forall (exp : Type), retract_f lp:{{ ExpExt }} exp -> (nat -> exp -> Prop) -> nat -> exp -> Prop }}) "argument illtyped",
+        coq.say "Ok".
+
+        
+ }}.
+
+Elpi build_retract_lc_rev_type (lc'_ite) (exp_ite).
+Elpi build_retract_lc_rev_type (lc'_mut) (exp_mut).
+Elpi build_retract_lc_rev_type (lc'_ite) (exp_ite).
 
 Definition retract_lc_revT exp_ext lc'_ext { retr : retract_f exp_ext exp} : Prop :=
     forall (n : nat) (e : exp_ext exp), lc' n (inj e) -> lc'_ext retr lc' n (inj e). 
