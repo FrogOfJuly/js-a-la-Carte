@@ -1,29 +1,57 @@
 From Imp Require Export header_extensible.
+From Imp Require Export elpi_shenanigans.
+
 From Stdlib Require Import Lia.
 
-Section exp_lam.
-    Variable exp : Type.
+From Imp Require Export elpi_shenanigans.
 
+Section exp_lam.
+
+    #[represents = exp]
+    Elpi RegisterVariable
+    Variable exp : Type.
+    
+    (* #[extends = exp, db = exp_lam]
+    Elpi RegisterExtensionInline *)
     Inductive exp_lam : Type := 
         | ab : exp -> exp_lam
         | app : exp -> exp -> exp_lam
         | bvar : nat -> exp_lam
     .
 
-    Context `{retract exp_lam exp}.
+    (* 
+    for inductive constructors maybe I need to use something else
+    Elpi set_section_deps (exp_lam). 
+    *)
+
+
+
+
+    Context `{Hretr : retract exp_lam exp}.
+
+    #[represents = retract_exp_exp_lam]
+    Elpi RegisterVariable (Hretr).
 
     Definition ab_  (s0 : exp  ) : _ := inj (ab s0).
     Definition app_  (s0 s1 : exp  ) : _ := inj (app s0 s1).
     Definition bvar_  (n : nat) : _ := inj (bvar n).
 
+    
     Variable open_rec : nat -> exp -> exp -> exp.
 
+    #[represents = open_rec]
+    Elpi RegisterVariable (open_rec).
+
+    (* #[extends = open_rec]
+    Elpi RegisterExtensionInline *)
     Definition open_rec_lam (k : nat) (u : exp) (e : exp_lam) : exp := 
         match e with 
             | bvar n => if Nat.eqb k n then u else bvar_ n
             | app t t'   => app_ (open_rec k u t) (open_rec k u t')
             | ab t       => ab_ (open_rec (S k) u t)
         end.
+
+    Elpi SetSectionDeps (open_rec_lam).
 
     Variable retract_open_rec : forall (n : nat) s (e : exp_lam),
             open_rec n s (inj e) = open_rec_lam n s e.
@@ -32,6 +60,8 @@ Section exp_lam.
     Variable open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
     Variable lc_weaken   : forall s n m, n <= m  -> lc' n s -> lc' m s.
 
+    (* #[extends = lc']
+    Elpi RegisterExtensionInline *)
     Inductive lc'_lam : nat -> exp -> Prop := 
         | lc_app  n t t' : lc' n t -> lc' n t' -> lc'_lam n (app_ t t')
         | lc_ab   n t    : lc' (S n) t  -> lc'_lam n (ab_ t)
@@ -43,8 +73,8 @@ Section exp_lam.
     
     Lemma lc_ab_inv : forall s n, lc' n (ab_ s) -> lc' (S n) s.
       intros s n Hlc.
-      apply retract_lc_rev in Hlc. inversion Hlc; subst; try (apply retract_inj in H0; easy).
-      apply retract_inj in H0. inversion H0. subst. easy.
+      apply retract_lc_rev in Hlc. inversion Hlc; subst; try (apply retract_inj in H; easy).
+      apply retract_inj in H. inversion H. subst. easy.
     Qed.
 
     Lemma nat_shenenigans : forall n m, n < S m -> n = m \/ n < m.
@@ -68,6 +98,12 @@ Section exp_lam.
       - constructor. lia.
     Defined.
 
+    (* #[extends = lc_weaken]
+    Elpi RegisterExtension (lc_weaken_lam). *)
+
+    (* #[extends = lc_weaken] *)
+    (* Elpi RegisterExtension' (lc_weaken_lam). *)
+
     Definition open_rec_lc_lam : forall s t n, lc' 0 s -> lc'_lam (S n) t -> lc' n (open_rec n s t).
     Proof.
     intros s t n H1 H2.
@@ -87,21 +123,30 @@ Section exp_lam.
         apply retract_lc. constructor. easy.
     Defined.    
 
+    (* #[extends = open_rec_lc]
+    Elpi RegisterExtension (open_rec_lc_lam). *)
+      
     Variable value : exp -> Prop.
     Variable value_lc : forall v, value v -> lc' 0 v.
 
+    (* #[extends = value]
+    Elpi RegisterExtensionInline *)
     Inductive value_lam : exp -> Prop := 
         | value_ab (t : exp) : lc' 0 (ab_ t) -> value_lam (ab_ t)
     .
 
     Definition value_lc_lam : forall v, value_lam v -> lc' 0 v.
     Proof.
-        intros. inversion H0. easy.
+        intros v. inversion 1. easy.
     Defined.
 
+    (* #[extends = value_lc]
+    Elpi RegisterExtension (value_lc_lam). *)
 
     Variable tag : Type.
     
+    (* #[extends = tag]
+    Elpi RegisterExtensionInline *)
     Inductive tag_lam := 
       | tag_ab  : tag_lam
       | tag_var : tag_lam
@@ -112,20 +157,26 @@ Section exp_lam.
     Definition tag_ab_ := inj tag_ab.
     Definition tag_var_ := inj tag_var.
 
+    (* #[extends = tag_of]
+    Elpi RegisterExtensionInline *)
     Inductive tag_of_lam : exp -> tag -> Prop :=
       | tag_of_abs e : tag_of_lam (ab_ e) tag_ab_
       | tag_of_var n : tag_of_lam (bvar_ n) tag_var_
     .
+    
 
     Lemma tag_of_decidable_lam : forall (e : exp_lam) (t : tag_lam), ~tag_of_lam (inj e) (inj t) \/ tag_of_lam (inj e) (inj t).
     Proof.
       intros. destruct e; destruct t;
       try (right; constructor).
       all: left; inversion 1.
+      all: try apply retract_inj in H1.
       all: try apply retract_inj in H2.
-      all: try apply retract_inj in H3.
       all: easy.
     Defined.
+
+    (* #[extends = tag_of_decidable]
+    Elpi RegisterExtension (tag_of_decidable_lam). *)
 
 
     Variable Ctx : Type.
@@ -133,6 +184,8 @@ Section exp_lam.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
     
 
+    (* #[extends = step]
+    Elpi RegisterExtensionInline *)
     Inductive step_lam : Ctx -> exp -> Ctx -> exp -> Prop :=
         | stepBeta   ctx s         t : value t -> step_lam ctx (app_ (ab_ s) t) ctx (open_rec 0 t s)
         | stepAppL   ctx s ctx' s' t : value t -> step ctx s ctx' s' -> step_lam ctx (app_ s t) ctx' (app_ s' t)
@@ -144,17 +197,21 @@ Section exp_lam.
     Proof.
         intros c e c' e' lc_e.
         induction 1.
-        - apply retract_lc_rev in lc_e. inversion lc_e; try (apply retract_inj in H1; easy).
-          apply retract_inj in H1. inversion H1. subst.
+        - apply retract_lc_rev in lc_e. inversion lc_e; try (apply retract_inj in H0; easy).
+          apply retract_inj in H0. inversion H0. subst.
           apply open_rec_lc; try easy.
           apply lc_ab_inv. easy.
-        - apply retract_lc_rev in lc_e. inversion lc_e; try (apply retract_inj in H2; easy).
-          apply retract_inj in H2. inversion H2; subst; try (apply retract_inj in H2; easy).
-          apply retract_lc. constructor; try easy. apply (preservation ctx s ctx' s'); easy.
         - apply retract_lc_rev in lc_e. inversion lc_e; try (apply retract_inj in H1; easy).
-          subst. apply retract_inj in H1. inversion H1. subst.
+          apply retract_inj in H1. inversion H1; subst; try (apply retract_inj in H1; easy).
+          apply retract_lc. constructor; try easy. apply (preservation ctx s ctx' s'); easy.
+        - apply retract_lc_rev in lc_e. inversion lc_e; try (apply retract_inj in H0; easy).
+          subst. apply retract_inj in H0. inversion H0. subst.
           apply retract_lc. constructor. {easy. } 
           apply (preservation ctx t ctx' t'); easy.      
     Defined.
+
+    (* #[extends = preservation]
+    Elpi RegisterExtension (preservation_lam). *)
+
     
 End exp_lam.

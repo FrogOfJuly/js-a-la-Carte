@@ -1,4 +1,6 @@
 From Imp Require Import header_extensible.
+From Imp Require Import elpi_shenanigans.
+
 (* Feature functors *)
 From Imp Require Import exp_ite exp_lam exp_mut exp_err.
 (* Interaction functors *)
@@ -14,11 +16,15 @@ Inductive exp : Type :=
     | In_exp_err : exp_err exp -> exp
 .
 
-Elpi Tactic exact_constructor_elpi.
+#[represeted_as = exp]
+Elpi RegisterRepresented (exp).
+
+
+Elpi Tactic exact_constructor.
 Elpi Accumulate lp:{{
-    solve (goal _ _ Ty _ [str IndName] as G) GL :- !, 
+    solve (goal _ _ Ty _ [str IndName] as G) GL :- 
         % locate inductive type
-        std.assert! (coq.locate IndName (indt IndTyGRef)) "not an inductive type",
+        std.assert! (coq.locate IndName (indt IndTyGRef)) "not an inductive type", !,
         % locate constructors Constr of inductive type IndTyGRef
         coq.env.indt IndTyGRef _ _ _ _ Constr _,
         % find corresponding terms(ConstrTerms) by querying environment(env.global) for constructor symbols
@@ -31,7 +37,7 @@ Elpi Accumulate lp:{{
         % by zipping them together
         std.zip ConstrTerms ConstrTypes TermTypes,
         % find term corresponding to goal type
-        std.mem TermTypes (pr C Ty),
+        std.assert! (std.mem TermTypes (pr C Ty)) "can't solve with exact constructors",
         % use it
         refine C G GL.
     solve (goal _ _ Ty _ [str IndName] as _G) _GL :- 
@@ -39,30 +45,40 @@ Elpi Accumulate lp:{{
         coq.ltac.fail _ "fail".
 }}.
 
-Ltac exact_constructor := elpi exact_constructor_elpi exp.
-
-Ltac derive_retract_instance := match goal with 
-    [|- retract ?X ?Y] => exact (@Build_retract X Y 
-                                    ltac:(exact_constructor)
+Ltac derive_exp_retract_instance := match goal with 
+    | [|- retract ?X exp] => exact (@Build_retract X exp
+                                    ltac:(elpi exact_constructor exp)
                                     ltac:(intros x; destruct x; try (apply Some; assumption); exact None)
                                     ltac:(simpl; intros; trivial)
-                                    ltac:(simpl; intros x y H; destruct y; inversion H; easy)
-    )
+                                    ltac:(simpl; intros x y; destruct y; inversion 1; easy)
+                            )
 end.
 
-#[refine] Global Instance retract_exp_exp_lam : retract (exp_lam exp) exp := ltac:(derive_retract_instance). Defined.
-#[refine] Global Instance retract_exp_exp_ite : retract (exp_ite exp) exp := ltac:(derive_retract_instance). Defined.
-#[refine] Global Instance retract_exp_exp_mut : retract (exp_mut exp) exp := ltac:(derive_retract_instance). Defined.
-#[refine] Global Instance retract_exp_exp_err : retract (exp_err exp) exp := ltac:(derive_retract_instance). Defined.
-    
+#[refine] Global Instance retract_exp_exp_lam : retract (exp_lam exp) exp := ltac:(derive_exp_retract_instance). Defined.
+#[refine] Global Instance retract_exp_exp_ite : retract (exp_ite exp) exp := ltac:(derive_exp_retract_instance). Defined.
+#[refine] Global Instance retract_exp_exp_mut : retract (exp_mut exp) exp := ltac:(derive_exp_retract_instance). Defined.
+#[refine] Global Instance retract_exp_exp_err : retract (exp_err exp) exp := ltac:(derive_exp_retract_instance). Defined.
+
+
+#[represeted_as = retract_exp_exp_lam]
+Elpi RegisterRepresented (retract_exp_exp_lam).
+
+
 Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp := 
     match e with 
-        | In_exp_lam e => open_rec_lam _ open_rec k u e
+        (* | In_exp_lam e => open_rec_lam _ open_rec k u e *)
+        | In_exp_lam e => ltac:(elpi specialize_from_section open_rec_lam) k u e
         | In_exp_ite e => open_rec_ite _ open_rec k u e
         | In_exp_mut e => open_rec_mut _ open_rec k u e
         | In_exp_err e => open_rec_err _ open_rec k u e
     end
 .
+
+Check open_rec_lam.
+
+Definition open_rec_lam' := ltac:(exact (open_rec_lam exp open_rec)).
+
+Check open_rec_lam'.
 
 
 Inductive lc' : nat -> exp -> Prop := 
@@ -72,6 +88,16 @@ Inductive lc' : nat -> exp -> Prop :=
     | lc_in_err n e : lc'_err _ lc' n e -> lc' n e
 .
 
+(* Check lc'_lam. *)
+Elpi Command ReadAttr.
+Elpi Accumulate lp:{{
+
+    main [] :- 
+        coq.say {{exp_lam}}.
+}}.
+
+(* Elpi ReadAttr. *)
+
 
 Inductive value : exp -> Prop := 
     | value_in_lam (e : exp) : value_lam _ lc' e -> value e
@@ -79,7 +105,7 @@ Inductive value : exp -> Prop :=
     | value_in_mut (e : exp) : value_mut _ e -> value e
     | value_in_err (e : exp) : value_err _ e -> value e
 .
-
+(* 
 #[arguments(raw)] Elpi Command build_retract_lc_rev_type.
 Elpi Accumulate lp:{{ 
     main [trm LcExt, trm ExpExt] :- 
@@ -92,7 +118,9 @@ Elpi Accumulate lp:{{
 
 Elpi build_retract_lc_rev_type (lc'_ite) (exp_ite).
 Elpi build_retract_lc_rev_type (lc'_mut) (exp_mut).
-Elpi build_retract_lc_rev_type (lc'_ite) (exp_ite).
+Elpi build_retract_lc_rev_type (lc'_ite) (exp_ite). 
+
+*)
 
 Definition retract_lc_revT exp_ext lc'_ext { retr : retract_f exp_ext exp} : Prop :=
     forall (n : nat) (e : exp_ext exp), lc' n (inj e) -> lc'_ext retr lc' n (inj e). 
@@ -112,8 +140,7 @@ Definition retract_open_rec_rev_err : retract_open_rec_rev exp_err (@open_rec_er
 
 
 Fixpoint lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
-intros s n m n_le_m Hlc.
-inversion Hlc; subst.
+inversion 2; subst.
 - apply (lc_weaken_lam exp _ lc_weaken lc_in_lam _) with (n := n); easy.
 - apply (lc_weaken_ite exp _ lc_weaken lc_in_ite _) with (n := n); easy.
 - apply (lc_weaken_mut exp _ lc_weaken lc_in_mut _) with (n := n); easy.
@@ -122,8 +149,7 @@ Qed.
 
 Fixpoint open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
 Proof.
-intros s t n H1 H2.
-inversion H2; subst.
+inversion 2; subst.
 - apply (open_rec_lc_lam exp open_rec retract_open_rec_rev_lam lc' open_rec_lc lc_weaken lc_in_lam); easy.
 - apply (open_rec_lc_ite exp open_rec retract_open_rec_rev_ite lc' open_rec_lc lc_in_ite); easy.
 - apply (open_rec_lc_mut exp open_rec retract_open_rec_rev_mut lc' open_rec_lc lc_in_mut); easy.
@@ -132,7 +158,7 @@ Qed.
 
 Fixpoint value_lc : forall v, value v -> lc' 0 v.
 Proof.
-    intros v. induction 1.
+    inversion 1; subst.
     - apply (value_lc_lam _ _); easy.
     - apply (value_lc_ite _ _ lc_in_ite); easy.
     - apply (value_lc_mut _ _ lc_in_mut); easy.
@@ -146,44 +172,19 @@ Inductive tag :=
     | In_tag_err : tag_err -> tag
 .
 
-#[refine] Global Instance retract_tag_tag_ite : retract tag_ite tag := { 
-    retract_I := In_tag_ite; 
-    retract_R := fun x => match x with In_tag_ite t => Some t | _ => None end 
-    }.
-Proof.
-    - intros. reflexivity.
-    - intros x y. destruct y; try easy.
-      inversion 1. congruence.
-Defined.
+Ltac derive_tag_retract_instance := match goal with 
+    [|- retract ?X tag] => exact (@Build_retract X tag
+                                    ltac:(elpi exact_constructor tag)
+                                    ltac:(intros x; destruct x; try (apply Some; assumption); exact None)
+                                    ltac:(simpl; intros; trivial)
+                                    ltac:(simpl; intros x y; destruct y; inversion 1; congruence)
+    )
+end.
 
-#[refine] Global Instance retract_tag_tag_lam : retract tag_lam tag := { 
-    retract_I := In_tag_lam; 
-    retract_R := fun x => match x with In_tag_lam t => Some t | _ => None end 
-    }.
-Proof.
-    - intros. reflexivity.
-    - intros x y. destruct y; try easy.
-      inversion 1. congruence.
-Defined.
-
-#[refine] Global Instance retract_tag_tag_mut : retract tag_mut tag := { 
-    retract_I := In_tag_mut; 
-    retract_R := fun x => match x with In_tag_mut t => Some t | _ => None end 
-    }.
-Proof.
-    - intros. reflexivity.
-    - intros x y. destruct y; try easy.
-      inversion 1. congruence.
-Defined.
-
-#[refine] Global Instance retract_tag_tag_err : retract tag_err tag := { 
-    retract_I := In_tag_err; 
-    retract_R := fun x => match x with In_tag_err t => Some t | _ => None end 
-    }.
-Proof.
-    - intros. reflexivity.
-    - intros x y. destruct y; easy.
-Defined.
+#[refine] Global Instance retract_tag_tag_lam : retract tag_lam tag := ltac:(derive_tag_retract_instance). Defined. 
+#[refine] Global Instance retract_tag_tag_ite : retract tag_ite tag := ltac:(derive_tag_retract_instance). Defined.
+#[refine] Global Instance retract_tag_tag_mut : retract tag_mut tag := ltac:(derive_tag_retract_instance). Defined.
+#[refine] Global Instance retract_tag_tag_err : retract tag_err tag := ltac:(derive_tag_retract_instance). Defined.
 
 Inductive tag_of : exp -> tag -> Prop := 
     | tag_of_in_lam e t: tag_of_lam _ _ e t -> tag_of e t
@@ -191,6 +192,29 @@ Inductive tag_of : exp -> tag -> Prop :=
     | tag_of_in_mut e t: tag_of_mut _ _ e t -> tag_of e t
     | tag_of_in_err e t: tag_of_err _ _ e t -> tag_of e t 
 .
+
+Elpi Command RetractProp.
+Elpi Accumulate lp:{{
+    pred type->rng i:term o:(list term).
+    type->rng {{ lp:A -> lp:B }} (A::Rng) :- type->rng B Rng.
+    type->rng T [T].
+
+
+
+    main [trm P, trm Pinj] :- 
+        std.assert-ok! (coq.typecheck P P_Ty) "argument illtyped",
+        type->rng P_Ty P_Dec,
+        coq.say "Look P:" P_Dec,
+        std.assert-ok! (coq.typecheck Pinj Pinj_Ty) "argument illtyped",
+        type->rng Pinj_Ty Pinj_Dec,
+        coq.say "Look P_inj" Pinj_Dec.
+    main Args :-
+        coq.error "Called with wrong arguments:" Args _.
+}}.
+
+(* Check tag_of_lam. *)
+
+Elpi RetractProp (tag_of) (@tag_of_lam exp retract_exp_exp_lam tag retract_tag_tag_lam).
 
 Lemma retract_tag_of_lam : forall (t : tag_lam) (e : exp_lam exp), tag_of (inj e) (inj t) <-> tag_of_lam _ _ (inj e) (inj t).
 Proof.
