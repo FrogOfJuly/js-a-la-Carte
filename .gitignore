@@ -9,3 +9,4 @@ Makefile.conf
 .DS_Store
 .vscode
 .lia.cache
+_opam
