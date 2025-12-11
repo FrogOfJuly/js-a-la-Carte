@@ -231,7 +231,7 @@ Elpi Accumulate lp:{{
     std.assert! (coq.locate IndName GRef) "can't locate",
     coq.say "> Found gref:" GRef,
     resolve_dependencies GRef DepRepMatched,
-    std.filter DepRepMatched (x\ x = (pr _N []), coq.say "Goal:" G) [], !, 
+    std.filter DepRepMatched (x\ x = (pr _N [])) [], !, 
     std.map DepRepMatched extract DepRepMatched',
     std.map DepRepMatched' (x\ r\ r is (global x)) DepRepMatched'',
     coq.say "> Ided deps:" DepRepMatched'',
@@ -240,16 +240,43 @@ Elpi Accumulate lp:{{
     coq.say Res,
     refine Res G GL.
 
-  solve (goal Ctx _ _Ty _ [str IndName] as _G) _GL :-
+  pred extract' i:goal-ctx i:(pair string (list prop)) o:term.
+  extract' _ P R :-
+    P = pr N L,
+    coq.say "Found these" P,
+    std.mem L (represented_as R' N), !,
+    R is (global R').
+  extract' Ctx P R :-
+    P = pr N [],
+    coq.say "Found these" P,
+    coq.string->name N N',
+    coq.say "Ctx:" Ctx,
+    % TODO: coq.name->id is for internal usage
+    std.filter Ctx (x\ x = decl _ Nn _, coq.name->id Nn N) Ctx',
+    coq.say "Ctx':" Ctx',
+    std.mem Ctx' (decl H _ Ty),
+    coq.say "found in ctx:" H  N' ":" Ty,
+    R is H.
+
+  solve (goal Ctx A TyG B [str IndName] as _G) GL :-
     coq.say "Found thing:" IndName,
     std.assert! (coq.locate IndName GRef) "can't locate",
+    solve (goal Ctx A TyG B [trm (global GRef)]) GL.
+
+  solve (goal Ctx _ TyG _ [trm (global GRef)] as G) GL :-
+    
     coq.say "> Found gref:" GRef,
     % Resolve from databases
     resolve_dependencies GRef DepRepMatched,
     % Resolve from goal context
     std.filter DepRepMatched (x\ (x = (pr N []), coq.say "Can't resolve" N)) DepRepUnresolved, !,
     coq.say "> Unresolved deps:" DepRepUnresolved,
-    coq.ltac.fail 0 "Some section dependencies are missing".
+    std.map DepRepMatched (x\ r\ extract' Ctx x r) DepRepMatched',
+    coq.say "> Meee deps:" DepRepMatched',
+    Res = app ((global GRef)::DepRepMatched'),
+    std.assert-ok! (coq.typecheck Res Ty) "generated term failed to typecheck",
+    coq.say "resulting term:" Res ":" Ty "while goal is" TyG,
+    refine Res G GL.
 
   solve Args G :- 
     coq.say "What do" Args ", G:" G,
@@ -265,7 +292,7 @@ Definition foo := 1.
 #[represeted_as = y]
 Elpi RegisterRepresented (foo).
 
-Definition id_spec := ltac:(elpi specialize_from_section id).
+(* Definition id_spec := ltac:(elpi specialize_from_section id). *)
 
 #[represeted_as = ARepr]
 Elpi RegisterRepresented (nat).

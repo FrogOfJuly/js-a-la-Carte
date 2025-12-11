@@ -36,14 +36,16 @@ Section exp_lam.
     Definition app_  (s0 s1 : exp  ) : _ := inj (app s0 s1).
     Definition bvar_  (n : nat) : _ := inj (bvar n).
 
+    Elpi SetSectionDeps (ab_).
+    Elpi SetSectionDeps (app_).
+    Elpi SetSectionDeps (bvar_).
+
     
     Variable open_rec : nat -> exp -> exp -> exp.
 
     #[represents = open_rec]
     Elpi RegisterVariable (open_rec).
 
-    (* #[extends = open_rec]
-    Elpi RegisterExtensionInline *)
     Definition open_rec_lam (k : nat) (u : exp) (e : exp_lam) : exp := 
         match e with 
             | bvar n => if Nat.eqb k n then u else bvar_ n
@@ -60,8 +62,19 @@ Section exp_lam.
     Variable open_rec_lc : forall s t n, lc' 0 s -> lc' (S n) t -> lc' n (open_rec n s t).
     Variable lc_weaken   : forall s n m, n <= m  -> lc' n s -> lc' m s.
 
-    (* #[extends = lc']
-    Elpi RegisterExtensionInline *)
+    #[represents = retract_open_rec_rev_lam]
+    Elpi RegisterVariable (retract_open_rec).
+
+    #[represents = lc']
+    Elpi RegisterVariable (lc').
+
+    #[represents = open_rec_lc]
+    Elpi RegisterVariable (open_rec_lc).
+
+    #[represents = lc_weaken]
+    Elpi RegisterVariable (lc_weaken).
+
+    
     Inductive lc'_lam : nat -> exp -> Prop := 
         | lc_app  n t t' : lc' n t -> lc' n t' -> lc'_lam n (app_ t t')
         | lc_ab   n t    : lc' (S n) t  -> lc'_lam n (ab_ t)
@@ -70,6 +83,12 @@ Section exp_lam.
 
     Variable retract_lc: forall n e, lc'_lam n e -> lc' n e.
     Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_lam n (inj e).
+
+    #[represents = retract_lc_lam]
+    Elpi RegisterVariable (retract_lc).
+
+    #[represents = retract_lc_rev_lam]
+    Elpi RegisterVariable (retract_lc_rev).
     
     Lemma lc_ab_inv : forall s n, lc' n (ab_ s) -> lc' (S n) s.
       intros s n Hlc.
@@ -98,11 +117,7 @@ Section exp_lam.
       - constructor. lia.
     Defined.
 
-    (* #[extends = lc_weaken]
-    Elpi RegisterExtension (lc_weaken_lam). *)
-
-    (* #[extends = lc_weaken] *)
-    (* Elpi RegisterExtension' (lc_weaken_lam). *)
+    Elpi SetSectionDeps (lc_weaken_lam).
 
     Definition open_rec_lc_lam : forall s t n, lc' 0 s -> lc'_lam (S n) t -> lc' n (open_rec n s t).
     Proof.
@@ -122,6 +137,8 @@ Section exp_lam.
         { apply lc_weaken with (n:=0). lia. easy. }
         apply retract_lc. constructor. easy.
     Defined.    
+
+    Elpi SetSectionDeps (open_rec_lc_lam).
 
     (* #[extends = open_rec_lc]
     Elpi RegisterExtension (open_rec_lc_lam). *)
