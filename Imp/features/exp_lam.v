@@ -7,9 +7,10 @@ From Imp Require Export elpi_shenanigans.
 
 Section exp_lam.
 
-    #[represents = exp]
-    Elpi RegisterVariable
     Variable exp : Type.
+
+    #[represents = exp]
+    Elpi RegisterVariable (exp).
     
     (* #[extends = exp, db = exp_lam]
     Elpi RegisterExtensionInline *)
@@ -19,13 +20,7 @@ Section exp_lam.
         | bvar : nat -> exp_lam
     .
 
-    (* 
-    for inductive constructors maybe I need to use something else
-    Elpi set_section_deps (exp_lam). 
-    *)
-
-
-
+    Elpi SetSectionDeps (exp_lam).
 
     Context `{Hretr : retract exp_lam exp}.
 
@@ -80,6 +75,8 @@ Section exp_lam.
         | lc_ab   n t    : lc' (S n) t  -> lc'_lam n (ab_ t)
         | lc_bvar k n    : k < n -> lc'_lam n (bvar_ k)
     .
+
+    Elpi SetSectionDeps (lc'_lam).
 
     Variable retract_lc: forall n e, lc'_lam n e -> lc' n e.
     Variable retract_lc_rev: forall n e, lc' n (inj e) -> lc'_lam n (inj e).
@@ -146,21 +143,35 @@ Section exp_lam.
     Variable value : exp -> Prop.
     Variable value_lc : forall v, value v -> lc' 0 v.
 
+
+    #[represents = value]
+    Elpi RegisterVariable (value).
+
+    #[represents = value_lc]
+    Elpi RegisterVariable (value_lc).
+
     (* #[extends = value]
     Elpi RegisterExtensionInline *)
     Inductive value_lam : exp -> Prop := 
         | value_ab (t : exp) : lc' 0 (ab_ t) -> value_lam (ab_ t)
     .
 
+    Elpi SetSectionDeps (value_lam).
+
     Definition value_lc_lam : forall v, value_lam v -> lc' 0 v.
     Proof.
         intros v. inversion 1. easy.
     Defined.
 
+    Elpi SetSectionDeps (value_lc_lam).
+
     (* #[extends = value_lc]
     Elpi RegisterExtension (value_lc_lam). *)
 
     Variable tag : Type.
+
+    #[represents = tag]
+    Elpi RegisterVariable (tag).
     
     (* #[extends = tag]
     Elpi RegisterExtensionInline *)
@@ -169,17 +180,25 @@ Section exp_lam.
       | tag_var : tag_lam
     .
 
+    Elpi SetSectionDeps (tag_lam).
+
     Context `{Htag : retract tag_lam tag}.
+
+    #[represents = retract_tag_tag_lam]
+    Elpi RegisterVariable (Htag).
 
     Definition tag_ab_ := inj tag_ab.
     Definition tag_var_ := inj tag_var.
 
-    (* #[extends = tag_of]
-    Elpi RegisterExtensionInline *)
+    Elpi SetSectionDeps (tag_ab_).
+    Elpi SetSectionDeps (tag_var_).
+
     Inductive tag_of_lam : exp -> tag -> Prop :=
       | tag_of_abs e : tag_of_lam (ab_ e) tag_ab_
       | tag_of_var n : tag_of_lam (bvar_ n) tag_var_
     .
+
+    Elpi SetSectionDeps (tag_of_lam).
     
 
     Lemma tag_of_decidable_lam : forall (e : exp_lam) (t : tag_lam), ~tag_of_lam (inj e) (inj t) \/ tag_of_lam (inj e) (inj t).
@@ -192,13 +211,20 @@ Section exp_lam.
       all: easy.
     Defined.
 
-    (* #[extends = tag_of_decidable]
-    Elpi RegisterExtension (tag_of_decidable_lam). *)
-
+    Elpi SetSectionDeps (tag_of_decidable_lam).
 
     Variable Ctx : Type.
     Variable step : Ctx -> exp -> Ctx -> exp -> Prop.
     Variable preservation : forall c e c' e', lc' 0 e -> step c e c' e' -> lc' 0 e'.
+
+    #[represents = Ctx]
+    Elpi RegisterVariable (Ctx).
+
+    #[represents = step]
+    Elpi RegisterVariable (step).
+
+    #[represents = preservation]
+    Elpi RegisterVariable (preservation).
     
 
     (* #[extends = step]
@@ -208,6 +234,8 @@ Section exp_lam.
         | stepAppL   ctx s ctx' s' t : value t -> step ctx s ctx' s' -> step_lam ctx (app_ s t) ctx' (app_ s' t)
         | stepAppR s ctx t ctx' t'   : step ctx t ctx' t' -> step_lam ctx (app_ s t) ctx' (app_ s t')
     .
+
+    Elpi SetSectionDeps (step_lam).
 
 
     Definition preservation_lam : forall c e c' e', lc' 0 e -> step_lam c e c' e' -> lc' 0 e'.
@@ -227,8 +255,6 @@ Section exp_lam.
           apply (preservation ctx t ctx' t'); easy.      
     Defined.
 
-    (* #[extends = preservation]
-    Elpi RegisterExtension (preservation_lam). *)
-
+    Elpi SetSectionDeps (preservation_lam).
     
 End exp_lam.

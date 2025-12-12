@@ -8,9 +8,13 @@ From Imp Require Import int_lam_err int_ite_err int_mut_err.
 
 From elpi Require Import elpi.
 
+(*  *)
+
+Elpi Export specialize_from_section.
+
 
 Inductive exp : Type := 
-    | In_exp_lam : exp_lam exp -> exp
+    | In_exp_lam : (specialize_from_section exp_lam) -> exp
     | In_exp_ite : exp_ite exp -> exp
     | In_exp_mut : exp_mut exp -> exp
     | In_exp_err : exp_err exp -> exp
@@ -64,7 +68,6 @@ end.
 #[represeted_as = retract_exp_exp_lam]
 Elpi RegisterRepresented (retract_exp_exp_lam).
 
-
 Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp := 
     match e with 
         (* | In_exp_lam e => open_rec_lam _ open_rec k u e *)
@@ -75,8 +78,12 @@ Fixpoint open_rec (k : nat) (u : exp) (e : exp) : exp :=
     end
 .
 
+
+
 #[represeted_as = open_rec]
 Elpi RegisterRepresented (open_rec).
+
+Definition open_rec_lam' := ltac:(elpi specialize_from_section open_rec_lam).
 
 Inductive lc' : nat -> exp -> Prop := 
     | lc_in_lam n e : lc'_lam _ lc' n e -> lc' n e
@@ -87,16 +94,6 @@ Inductive lc' : nat -> exp -> Prop :=
 
 #[represeted_as = lc']
 Elpi RegisterRepresented (lc').
-
-Inductive value : exp -> Prop := 
-    | value_in_lam (e : exp) : value_lam _ lc' e -> value e
-    | value_in_ite (e : exp) : value_ite _ e -> value e
-    | value_in_mut (e : exp) : value_mut _ e -> value e
-    | value_in_err (e : exp) : value_err _ e -> value e
-.
-
-#[represeted_as = value]
-Elpi RegisterRepresented (value).
 
 Definition retract_lc_revT exp_ext lc'_ext { retr : retract_f exp_ext exp} : Prop :=
     forall (n : nat) (e : exp_ext exp), lc' n (inj e) -> lc'_ext retr lc' n (inj e). 
@@ -120,7 +117,7 @@ Definition retract_open_rec_rev exp_ext open_rec_ext  { retr : retract_f exp_ext
 
 
 Definition retract_open_rec_rev_lam : 
-    forall (n : nat) s (e : exp_lam exp), open_rec n s (inj e) = open_rec_lam _ open_rec n s e := ltac:(intros; easy).
+    forall (n : nat) s (e : exp_lam exp), open_rec n s (inj e) = open_rec_lam' n s e := ltac:(intros; easy).
 
 #[represeted_as = retract_open_rec_rev_lam]
 Elpi RegisterRepresented (retract_open_rec_rev_lam).
@@ -128,8 +125,6 @@ Elpi RegisterRepresented (retract_open_rec_rev_lam).
 Definition retract_open_rec_rev_ite : retract_open_rec_rev exp_ite (@open_rec_ite exp) := ltac:(intros; easy).
 Definition retract_open_rec_rev_mut : retract_open_rec_rev exp_mut (@open_rec_mut exp) := ltac:(intros; easy).
 Definition retract_open_rec_rev_err : retract_open_rec_rev exp_err (@open_rec_err exp) := ltac:(intros; easy).
-
-Elpi Export specialize_from_section.
 
 Fixpoint lc_weaken   : forall s n m, n <= m -> lc' n s -> lc' m s.
 inversion 2; subst.
@@ -153,6 +148,19 @@ inversion 2; subst.
 - apply (open_rec_lc_err exp open_rec retract_open_rec_rev_err lc' open_rec_lc lc_in_err); easy.
 Qed.
 
+#[represeted_as = open_rec_lc]
+Elpi RegisterRepresented (open_rec_lc).
+
+Inductive value : exp -> Prop := 
+    | value_in_lam (e : exp) : (specialize_from_section value_lam) e -> value e
+    | value_in_ite (e : exp) : value_ite _ e -> value e
+    | value_in_mut (e : exp) : value_mut _ e -> value e
+    | value_in_err (e : exp) : value_err _ e -> value e
+.
+
+#[represeted_as = value]
+Elpi RegisterRepresented (value).
+
 Fixpoint value_lc : forall v, value v -> lc' 0 v.
 Proof.
     inversion 1; subst.
@@ -162,6 +170,9 @@ Proof.
     - apply (value_lc_err _ _); easy.
 Qed.
 
+#[represeted_as = value_lc]
+Elpi RegisterRepresented (value_lc).
+
 Inductive tag := 
     | In_tag_lam : tag_lam -> tag
     | In_tag_ite : tag_ite -> tag
@@ -169,10 +180,16 @@ Inductive tag :=
     | In_tag_err : tag_err -> tag
 .
 
+#[represeted_as = tag]
+Elpi RegisterRepresented (tag).
+
 #[refine] Global Instance retract_tag_tag_lam : retract tag_lam tag := ltac:(try_derive_retract). Defined. 
 #[refine] Global Instance retract_tag_tag_ite : retract tag_ite tag := ltac:(try_derive_retract). Defined.
 #[refine] Global Instance retract_tag_tag_mut : retract tag_mut tag := ltac:(try_derive_retract). Defined.
 #[refine] Global Instance retract_tag_tag_err : retract tag_err tag := ltac:(try_derive_retract). Defined.
+
+#[represeted_as = retract_tag_tag_lam]
+Elpi RegisterRepresented (retract_tag_tag_lam).
 
 Inductive tag_of : exp -> tag -> Prop := 
     | tag_of_in_lam e t: tag_of_lam _ _ e t -> tag_of e t
@@ -181,28 +198,8 @@ Inductive tag_of : exp -> tag -> Prop :=
     | tag_of_in_err e t: tag_of_err _ _ e t -> tag_of e t 
 .
 
-Elpi Command RetractProp.
-Elpi Accumulate lp:{{
-    pred type->rng i:term o:(list term).
-    type->rng {{ lp:A -> lp:B }} (A::Rng) :- type->rng B Rng.
-    type->rng T [T].
-
-
-
-    main [trm P, trm Pinj] :- 
-        std.assert-ok! (coq.typecheck P P_Ty) "argument illtyped",
-        type->rng P_Ty P_Dec,
-        coq.say "Look P:" P_Dec,
-        std.assert-ok! (coq.typecheck Pinj Pinj_Ty) "argument illtyped",
-        type->rng Pinj_Ty Pinj_Dec,
-        coq.say "Look P_inj" Pinj_Dec.
-    main Args :-
-        coq.error "Called with wrong arguments:" Args _.
-}}.
-
-(* Check tag_of_lam. *)
-
-Elpi RetractProp (tag_of) (@tag_of_lam exp retract_exp_exp_lam tag retract_tag_tag_lam).
+#[represeted_as = tag_of]
+Elpi RegisterRepresented (tag_of).
 
 Lemma retract_tag_of_lam : forall (t : tag_lam) (e : exp_lam exp), tag_of (inj e) (inj t) <-> tag_of_lam _ _ (inj e) (inj t).
 Proof.
@@ -211,6 +208,9 @@ Proof.
     - inversion 1; easy.
     - constructor; easy.
 Qed.
+
+#[represeted_as = retract_tag_of_lam]
+Elpi RegisterRepresented (retract_tag_of_lam).
 
 Lemma retract_tag_of_ite : forall (t : tag_ite) (e : exp_ite exp), tag_of (inj e) (inj t) <-> tag_of_ite _ _ (inj e) (inj t).
 Proof.
@@ -247,6 +247,9 @@ Proof.
     all: left; inversion 1; inversion H0.
 Qed.
 
+#[represeted_as = tag_of_decidable]
+Elpi RegisterRepresented (tag_of_decidable).
+
 From Imp Require Import context.
 
 Definition VarEnv := Env (sig value).
@@ -254,6 +257,9 @@ Definition VarEnv := Env (sig value).
 Record Ctx := mkCtx {
         store : VarEnv;
 }.
+
+#[represeted_as = Ctx]
+Elpi RegisterRepresented (Ctx).
 
 #[refine] Global Instance ctx_supports_store : hasProj Ctx VarEnv := {
     get_proj := store;
@@ -263,6 +269,9 @@ Proof.
     - intros. easy.
     - intros. destruct c. simpl. easy.
 Defined.
+
+#[represeted_as = ctx_supports_store]
+Elpi RegisterRepresented (ctx_supports_store).
 
 Inductive step : Ctx -> exp -> Ctx -> exp -> Prop := 
     | step_in_lam (c : Ctx) s c' s' : step_lam _ open_rec value _ step c s c' s' -> step c s c' s'
@@ -275,6 +284,9 @@ Inductive step : Ctx -> exp -> Ctx -> exp -> Prop :=
     | step_in_mut_err (c : Ctx) s c' s' : step_int_mut_err _ value _ tag_of _ step c s c' s' -> step c s c' s'
 .
 
+#[represeted_as = step]
+Elpi RegisterRepresented (step).
+
 Definition lc := lc' 0.
 Definition open := open_rec 0.
 
@@ -286,7 +298,8 @@ Proof.
     intros c e c' e'.
     unfold lc in *.
     induction 2.
-    - apply (preservation_lam exp open_rec lc' open_rec_lc lc_in_lam retract_lc_rev_lam value Ctx step preservation c s c' s'); easy.
+    (* - apply (preservation_lam exp open_rec lc' open_rec_lc lc_in_lam retract_lc_rev_lam value Ctx step preservation c s c' s'); easy. *)
+    - apply ((specialize_from_section preservation_lam) c s c' s'); easy.
     - apply (preservation_ite exp lc' lc_in_ite retract_lc_rev_ite Ctx step preservation c s c' s'); easy.
     - apply (preservation_mut exp lc' lc_in_mut retract_lc_rev_mut value value_lc Ctx step preservation c s c' s'); easy.
     - apply (preservation_err exp lc' lc_in_err retract_lc_rev_err Ctx step preservation c s c' s'); easy.
@@ -295,4 +308,7 @@ Proof.
     - apply (preservation_ite_err exp lc' lc_in_err retract_lc_rev_ite retract_lc_rev_err value value_lc tag tag_of Ctx step preservation c s c' s'); easy.
     - apply (preservation_mut_err exp lc' lc_in_mut lc_in_err retract_lc_rev_mut value tag tag_of Ctx step preservation c s c' s'); easy.
 Defined.
+
+#[represeted_as = preservation]
+Elpi RegisterRepresented (preservation).
 
