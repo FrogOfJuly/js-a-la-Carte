@@ -3,8 +3,10 @@ From Imp Require Export elpi_shenanigans.
 
 From Stdlib Require Import Lia.
 
-From Imp Require Export elpi_shenanigans.
-
+(* 
+#[template=feature_functor]
+Elpi RealizeTemplate.
+ *)
 Section exp_lam.
 
     Variable exp : Type.
@@ -12,11 +14,9 @@ Section exp_lam.
     #[represents = exp]
     Elpi RegisterVariable (exp).
     
-    (* #[extends = exp, db = exp_lam]
-    Elpi RegisterExtensionInline *)
     Inductive exp_lam : Type := 
-        | ab : exp -> exp_lam
-        | app : exp -> exp -> exp_lam
+        | ab : exp -> exp_lam (* \lambda _. bvar 0 *)
+        | app : exp -> exp -> exp_lam 
         | bvar : nat -> exp_lam
     .
 
@@ -136,9 +136,6 @@ Section exp_lam.
     Defined.    
 
     Elpi SetSectionDeps (open_rec_lc_lam).
-
-    (* #[extends = open_rec_lc]
-    Elpi RegisterExtension (open_rec_lc_lam). *)
       
     Variable value : exp -> Prop.
     Variable value_lc : forall v, value v -> lc' 0 v.
@@ -150,8 +147,6 @@ Section exp_lam.
     #[represents = value_lc]
     Elpi RegisterVariable (value_lc).
 
-    (* #[extends = value]
-    Elpi RegisterExtensionInline *)
     Inductive value_lam : exp -> Prop := 
         | value_ab (t : exp) : lc' 0 (ab_ t) -> value_lam (ab_ t)
     .
@@ -165,16 +160,11 @@ Section exp_lam.
 
     Elpi SetSectionDeps (value_lc_lam).
 
-    (* #[extends = value_lc]
-    Elpi RegisterExtension (value_lc_lam). *)
-
     Variable tag : Type.
 
     #[represents = tag]
     Elpi RegisterVariable (tag).
     
-    (* #[extends = tag]
-    Elpi RegisterExtensionInline *)
     Inductive tag_lam := 
       | tag_ab  : tag_lam
       | tag_var : tag_lam
@@ -227,8 +217,6 @@ Section exp_lam.
     Elpi RegisterVariable (preservation).
     
 
-    (* #[extends = step]
-    Elpi RegisterExtensionInline *)
     Inductive step_lam : Ctx -> exp -> Ctx -> exp -> Prop :=
         | stepBeta   ctx s         t : value t -> step_lam ctx (app_ (ab_ s) t) ctx (open_rec 0 t s)
         | stepAppL   ctx s ctx' s' t : value t -> step ctx s ctx' s' -> step_lam ctx (app_ s t) ctx' (app_ s' t)
@@ -256,5 +244,88 @@ Section exp_lam.
     Defined.
 
     Elpi SetSectionDeps (preservation_lam).
+
+    (* You can do it like this.
+       TODO: make it less painful
     
+    #[represents = exp]
+    Elpi RegisterVariable (exp).
+    
+    #[represents = retract_exp_exp_lam]
+    Elpi RegisterVariable (Hretr).
+
+    #[represents = open_rec]
+    Elpi RegisterVariable (open_rec).
+
+    #[represents = retract_open_rec_rev_lam]
+    Elpi RegisterVariable (retract_open_rec).
+
+    #[represents = lc']
+    Elpi RegisterVariable (lc').
+
+    #[represents = open_rec_lc]
+    Elpi RegisterVariable (open_rec_lc).
+
+    #[represents = lc_weaken]
+    Elpi RegisterVariable (lc_weaken).
+
+    #[represents = retract_lc_lam]
+    Elpi RegisterVariable (retract_lc).
+
+    #[represents = retract_lc_rev_lam]
+    Elpi RegisterVariable (retract_lc_rev).
+
+    #[represents = tag]
+    Elpi RegisterVariable (tag).
+
+    #[represents = retract_tag_tag_lam]
+    Elpi RegisterVariable (Htag).
+
+    #[represents = value]
+    Elpi RegisterVariable (value).
+
+    #[represents = value_lc]
+    Elpi RegisterVariable (value_lc).
+
+    #[represents = Ctx]
+    Elpi RegisterVariable (Ctx).
+
+    #[represents = step]
+    Elpi RegisterVariable (step).
+
+    #[represents = preservation]
+    Elpi RegisterVariable (preservation).
+    
+    Elpi SetSectionDeps (open_rec_lam).
+    Elpi SetSectionDeps (exp_lam).
+    Elpi SetSectionDeps (ab_).
+    Elpi SetSectionDeps (app_).
+    Elpi SetSectionDeps (bvar_).
+    Elpi SetSectionDeps (lc'_lam).
+    Elpi SetSectionDeps (open_rec_lc_lam).
+    Elpi SetSectionDeps (lc_weaken_lam).
+    Elpi SetSectionDeps (value_lc_lam).
+    Elpi SetSectionDeps (value_lam).
+    Elpi SetSectionDeps (tag_lam).
+    Elpi SetSectionDeps (tag_lam).
+    Elpi SetSectionDeps (tag_ab_).
+    Elpi SetSectionDeps (tag_var_).
+    Elpi SetSectionDeps (tag_of_lam).
+    Elpi SetSectionDeps (tag_of_decidable_lam).
+    Elpi SetSectionDeps (step_lam).
+    Elpi SetSectionDeps (preservation_lam). 
+    
+    *)
+
+(*
+
+#[representation(renaming( retract_lc_rev = retract_lc_rev_lam
+                         , Hretr = retract_exp_exp_lam
+                         , retract_open_rec = retract_open_rec_lam
+                         , Htag = retract_tag_tag_lam)
+                ,exclude = [])
+ ,mark_section_dependencies(-- only = [],
+                            excluding = [lc_ab_inv, nat_shenenigans])] 
+Elpi Registrations  *)
 End exp_lam.
+(*  ^-- This thing can be used as prefix for dependencies, ensuring name uniqueness for marks *)
