@@ -1,6 +1,6 @@
 # Modular take on Javascript formalization in Rocq
 
-Inspiration is taken from [here](https://github.com/uds-psl/coq-a-la-carte-cpp20/tree/master).
+Inspiration is taken from [Coq a la Carte]([https://github.com/uds-psl/coq-a-la-carte-cpp20/tree/master](https://dl.acm.org/doi/pdf/10.1145/3372885.3373817?casa_token=6rfiSgn-oHoAAAAA:UyHouiN8WO2iArwO5ivJzmd44GC4Ml9a8AnFJAXVFoEBtgmdSDHxmiQk-PqVvRcoLL_2R8a5q5w61Q)) paper and its [implementation](https://github.com/uds-psl/coq-a-la-carte-cpp20/tree/master).
 
 ## Build
 
