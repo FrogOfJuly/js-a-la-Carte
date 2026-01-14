@@ -10,6 +10,22 @@ From elpi Require Import elpi.
 
 Elpi Export specialize_from_section.  
 
+(* 
+
+Command Register :- 
+  (@local! => coq.elpi.acc "work.db" (clause _ _ _ _))
+
+coq.elpi.add_predicate
+coq.elpi.predicate
+
+create_tc_predicate.elpi
+
+rules can be local: @local! => ...
+
+#[proof="begin"], #[proof(begin_if=...)], main-iterp-proof
+
+
+*)
 
 (*
 TODO:
